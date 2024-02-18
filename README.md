@@ -2,6 +2,8 @@
 
 <img src='assets/banner.png'>
 
+In this innovative challenge, part of the Encoded Reality Series, data scientists are tasked with harnessing their unique ability to transfer solutions across disciplines. The objective is to adapt an algorithm originally designed for generic computer vision tasks to the specialized field of geophysics. Participants will employ Siamese Neural Networks (SNN), known for their proficiency in one-shot learning, to identify and match similar seismic images from a limited dataset across eight categories. The goal is to train the algorithm to recognize complex features within seismic data, much like a geoscientist discerns geological structures such as river channels, salt pans, or faults in black-and-white seismic imagery. This challenge offers an experimental platform for participants to showcase innovative applications of SNNs, ultimately aiding geoscientists in developing more comprehensive Earth models by quickly identifying key seismic features, thereby enhancing their ability to integrate various data into their analyses.
+
 This project was made possible by our compute partners [2CRSI](https://2crsi.com/)
 and [NVIDIA](https://www.nvidia.com/).
 
