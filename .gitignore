@@ -1,0 +1,11 @@
+/data
+/models
+**/.idea
+**/wandb
+**/.ipynb_checkpoints
+/reports
+/submissions
+**.egg-info
+**.log
+**/__pycache__
+.DS_Store

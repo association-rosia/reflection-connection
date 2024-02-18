@@ -1,0 +1,19 @@
+name: reflection-connection-env
+dependencies:
+  - python=3.10.*
+  - pip
+  - pip:
+      - jupyter
+      - pyyaml
+      - tqdm
+      - opencv-python
+      - numpy
+      - pandas
+      - scikit-learn
+      - torch
+      - torchvision
+      - transformers
+      - pytorch-lightning
+      - wandb
+      - matplotlib
+      - plotly
