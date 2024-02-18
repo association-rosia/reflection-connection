@@ -13,8 +13,6 @@ and [NVIDIA](https://www.nvidia.com/).
 
 ## #️⃣ Command lines
 
-### Launch a training
-
 ## 🔬 References
 
 ## 📝 Citing
