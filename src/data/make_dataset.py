@@ -58,7 +58,7 @@ class RefConDataset(Dataset):
         triplets = []
         for idx in range(len(self.indices)):
             positive_idx = random_state.choice(self.label_to_indices[self.targets[idx]])
-            negative_label = random_state.choice(list(self.labels_set, set[self.targets[idx]]))
+            negative_label = random_state.choice(list(self.labels_set - set([self.targets[idx]])))
             negative_idx = random_state.choice(self.label_to_indices[negative_label])
             triplets.append((idx, positive_idx, negative_idx))
 
@@ -67,7 +67,7 @@ class RefConDataset(Dataset):
     def preprocess_image(self, image):
         image = tvF.to_tensor(image)
         image = tvF.adjust_contrast(image, contrast_factor=self.wandb_config['contrast_factor'])
-        image = tvF.resize(image, size=self.wandb_config['size'])
+        image = tvF.resize(image, size=self.wandb_config['size'], interpolation=tvF.InterpolationMode.BILINEAR)
         image = tvF.normalize(image, mean=self.config['data']['mean'], std=self.config['data']['std'])
         
         return image
@@ -123,7 +123,6 @@ if __name__ == '__main__':
     # compute_image_mean_std()
     train_indices, val_indices = get_train_val_indices(wandb_config, dataset)
     train_refcon_dataset = RefConDataset(config, wandb_config, dataset, train_indices, True)
-    
-    train_refcon_dataset[0]
+    val_refcon_dataset = RefConDataset(config, wandb_config, dataset, train_indices, False)
     
     pass
