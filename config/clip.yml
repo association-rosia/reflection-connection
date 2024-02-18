@@ -1,0 +1,13 @@
+dry: true
+
+random_state: 42
+max_epochs: 25
+
+contrast_factor: 25
+size: [255, 255]
+
+model_mask_id: 'openai/clip-vit-large-patch14'
+
+batch_size: 16
+
+lr: 0.0001
