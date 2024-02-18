@@ -16,6 +16,8 @@ path:
     figures: 'reports/figures'
   submissions:
     root: 'submissions'
+  logs:
+    root: 'logs'
 
 wandb:
   entity: 'association-rosia'
