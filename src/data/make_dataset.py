@@ -6,6 +6,7 @@ from torchvision.datasets import ImageFolder
 import torchvision.transforms.functional as tvF
 from tqdm import tqdm
 import torch
+from src import utils
 
 
 class RefConDataset(Dataset):
@@ -111,12 +112,15 @@ def compute_image_mean_std():
     print('mean', mean)
     print('std', std)
 
+
 def get_base_dataset(config):
-    return ImageFolder(config['path']['data']['raw']['train'])
+    path = config['path']['data']['raw']['train']
+    path = utils.get_notebooks_path(path)
+    
+    return ImageFolder(path)
+
 
 if __name__ == '__main__':
-    from src import utils
-    
     config = utils.get_config()
     wandb_config = utils.load_config('clip.yml')
     dataset = get_base_dataset(config)

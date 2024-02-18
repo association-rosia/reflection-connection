@@ -15,10 +15,16 @@ def get_device():
     return device
 
 
+def get_notebooks_path(path):
+    notebooks = os.path.join(os.pardir, path)
+    new_path = path if os.path.exists(path) else notebooks
+    
+    return new_path
+
+
 def load_config(yml_file):
     root = os.path.join('config', yml_file)
-    notebooks = os.path.join(os.pardir, root)
-    path = root if os.path.exists(root) else notebooks
+    path = get_notebooks_path(root)
 
     with open(path, 'r') as f:
         config = yaml.safe_load(f)
@@ -31,8 +37,12 @@ def get_config():
 
 
 def init_wandb(yml_file):
-    wandb_config = load_config(yml_file)
     config = get_config()
+    wandb_dir = get_notebooks_path(config['path']['logs']['root'])
+    os.makedirs(wandb_dir, exist_ok=True)
+    os.environ["WANDB_DIR"] = os.path.abspath(wandb_dir)
+    
+    wandb_config = load_config(yml_file)
 
     wandb.init(
         entity=config['wandb']['entity'],
@@ -65,10 +75,3 @@ class RunDemo:
         self.config = load_config(config_file)
         self.name = name
         self.id = id
-
-
-def resize_tensor_2d(tensor, size, interpolation=tvF.InterpolationMode.BILINEAR):
-    resized_tensor = tvF.resize(tensor.unsqueeze(0), size=size, interpolation=interpolation).squeeze(0)
-
-    return resized_tensor
-
