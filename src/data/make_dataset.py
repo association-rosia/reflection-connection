@@ -27,6 +27,8 @@ class RefConDataset(Dataset):
                                      for label in self.labels_set}
         self.subset = Subset(self.dataset, self.indices)
         
+        self.processor = RefConfProcessor(self.config, self.wandb_config)
+        
         if not self.train:
             self.triplets = self.generate_triplets()
     
@@ -48,9 +50,9 @@ class RefConDataset(Dataset):
             img2, _ = self.subset[self.triplets[idx][1]]
             img3, _ = self.subset[self.triplets[idx][2]]
         
-        img1 = self.preprocess_image(img1)
-        img2 = self.preprocess_image(img2)
-        img3 = self.preprocess_image(img3)
+        img1 = self.processor.preprocess_image(img1)
+        img2 = self.processor.preprocess_image(img2)
+        img3 = self.processor.preprocess_image(img3)
 
         return img1, img2, img3
     
@@ -65,13 +67,23 @@ class RefConDataset(Dataset):
 
         return triplets
 
-    def preprocess_image(self, image):
+
+class RefConfProcessor:
+    def __init__(self, config, wandb_config) -> None:
+        self.config = config
+        self.wandb_config = wandb_config
+        
+    def preprocess_image(self, image: torch.Tensor) -> torch.Tensor:
         image = tvF.to_tensor(image)
         image = tvF.adjust_contrast(image, contrast_factor=self.wandb_config['contrast_factor'])
         image = tvF.resize(image, size=self.wandb_config['size'], interpolation=tvF.InterpolationMode.BILINEAR)
         image = tvF.normalize(image, mean=self.config['data']['mean'], std=self.config['data']['std'])
         
         return image
+    
+    def __call__(self, image: torch.Tensor) -> torch.Tensor:
+        
+        return self.preprocess_image(image)
 
 
 def get_train_val_indices(wandb_config, dataset: ImageFolder):

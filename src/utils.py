@@ -2,6 +2,7 @@ import os
 import torch
 import torchvision.transforms.functional as tvF
 import wandb
+import wandb.apis.public as wandb_api
 import yaml
 
 
@@ -53,14 +54,14 @@ def init_wandb(yml_file):
     return wandb.config
 
 
-def get_run(run_id: str):
+def get_run(run_id: str) -> wandb_api.Run:
     run = None
 
     if run_id:
         project_config = get_config()
 
         api = wandb.Api()
-        run = wandb.apis.public.Run(
+        run = wandb_api.Run(
             client=api.client,
             entity=project_config['wandb']['entity'],
             project=project_config['wandb']['project'],
@@ -71,7 +72,7 @@ def get_run(run_id: str):
 
 
 class RunDemo:
-    def __init__(self, config_file, id, name) -> None:
+    def __init__(self, config_file: str, id: str, name: str) -> None:
         self.config = load_config(config_file)
         self.name = name
         self.id = id
