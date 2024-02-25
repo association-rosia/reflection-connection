@@ -5,8 +5,7 @@ import pytorch_lightning as pl
 import torch
 import wandb
 
-import src.data.make_dataset as md
-import src.models.clip.make_lightning as clip_ml
+import src.models.clip.lightning as clip_l
 from src import utils
 
 warnings.filterwarnings('ignore')
@@ -56,24 +55,19 @@ def get_trainer(config):
 
 
 def get_lightning(config, wandb_config, checkpoint=None):
-    base_dataset = md.get_base_dataset(config)
-    train_indices, val_indices = md.get_train_val_indices(wandb_config, base_dataset)
-    model = clip_ml.get_model(wandb_config)
+    model = clip_l.get_model(wandb_config)
 
-    args = {
+    kargs = {
         'config': config,
         'wandb_config': wandb_config,
-        'model': model,
-        'train_indices': train_indices,
-        'val_indices': val_indices,
-        'dataset': base_dataset
+        'model': model
     }
 
     if checkpoint is None:
-        lightning = clip_ml.RefConLightning(args)
+        lightning = clip_l.RefConLightning(**kargs)
     else:
         path_checkpoint = os.path.join(config['path']['models']['root'], checkpoint)
-        lightning = clip_ml.RefConLightning.load_from_checkpoint(path_checkpoint, args=args)
+        lightning = clip_l.RefConLightning.load_from_checkpoint(path_checkpoint, **kargs)
 
     return lightning
 

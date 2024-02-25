@@ -33,7 +33,7 @@ class ImageSet:
         self.names = os.listdir(self.path)
 
     def _load_model(self):
-        return im.RefConInferenceModel(self.config, self.wandb_run, self.cuda_idx)
+        return im.RefConInferenceModel.load_from_wandb_run(self.config, self.wandb_run, self.cuda_idx)
     
     def build_embeddings(self):
         model = self._load_model()
