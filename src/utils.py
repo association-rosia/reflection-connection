@@ -1,12 +1,11 @@
 import os
 import torch
-import torchvision.transforms.functional as tvF
 import wandb
 import wandb.apis.public as wandb_api
 import yaml
 
 
-def get_device():
+def get_device() -> str:
     device = 'cpu'
     if torch.cuda.is_available():
         device = 'cuda'
@@ -16,14 +15,14 @@ def get_device():
     return device
 
 
-def get_notebooks_path(path):
+def get_notebooks_path(path: str) -> str:
     notebooks = os.path.join(os.pardir, path)
     new_path = path if os.path.exists(path) else notebooks
     
     return new_path
 
 
-def load_config(yml_file):
+def load_config(yml_file: str) -> dict:
     root = os.path.join('config', yml_file)
     path = get_notebooks_path(root)
 
@@ -33,11 +32,11 @@ def load_config(yml_file):
     return config
 
 
-def get_config():
+def get_config() -> dict:
     return load_config('config.yml')
 
 
-def init_wandb(yml_file):
+def init_wandb(yml_file: str) -> dict:
     config = get_config()
     wandb_dir = get_notebooks_path(config['path']['logs']['root'])
     os.makedirs(wandb_dir, exist_ok=True)
