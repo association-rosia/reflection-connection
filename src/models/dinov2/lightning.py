@@ -3,10 +3,10 @@ from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 from typing import Any
 
-from transformers import CLIPVisionModelWithProjection
+from transformers import Dinov2Model
 
-from src.models.losses import make_triplet_criterion
 import src.data.datasets.triplet_dataset as td
+from src.models.losses import make_triplet_criterion
 from src import utils
 
 
@@ -15,7 +15,7 @@ class RefConLightning(pl.LightningModule):
         self,
         config: dict,
         wandb_config: dict,
-        model: CLIPVisionModelWithProjection,
+        model: Dinov2Model,
         *args: Any,
         **kargs: Any
         ):
@@ -27,9 +27,9 @@ class RefConLightning(pl.LightningModule):
         self.criterion = make_triplet_criterion(self.wandb_config)
     
     def forward(self, anchors, positives, negatives):
-        anchors_embed = self.model(pixel_values=anchors)['image_embeds']
-        positives_embed = self.model(pixel_values=positives)['image_embeds']
-        negatives_embed = self.model(pixel_values=negatives)['image_embeds']
+        anchors_embed = self.model(pixel_values=anchors)['pooler_output']
+        positives_embed = self.model(pixel_values=positives)['pooler_output']
+        negatives_embed = self.model(pixel_values=negatives)['pooler_output']
         loss = self.criterion(anchors_embed, positives_embed, negatives_embed)
         
         return loss
@@ -76,8 +76,8 @@ class RefConLightning(pl.LightningModule):
         return dataloader
 
 
-def get_model(wandb_config) -> CLIPVisionModelWithProjection:
-    model = CLIPVisionModelWithProjection.from_pretrained(
+def get_model(wandb_config) -> Dinov2Model:
+    model = Dinov2Model.from_pretrained(
         pretrained_model_name_or_path=wandb_config['model_id'],
         ignore_mismatched_sizes=True
     )
@@ -87,7 +87,7 @@ def get_model(wandb_config) -> CLIPVisionModelWithProjection:
 
 def _debug():
     config = utils.get_config()
-    wandb_config = utils.init_wandb('clip.yml')
+    wandb_config = utils.init_wandb('dinov2.yml')
     model = get_model(wandb_config)
 
     kargs = {

@@ -7,9 +7,9 @@ import os
 
 def main():
     config = utils.get_config()
-    wandb_run = utils.get_run('sxa0zzzr')
-    query_set = search.ImageSet(config, wandb_run, query=True, cuda_idx=0)
-    corpus_set = search.ImageSet(config, wandb_run, query=False, cuda_idx=0)
+    wandb_run = utils.get_run('ot42ue7o')
+    query_set = search.ImageSet(config, wandb_run, query=True, cuda_idx=1)
+    corpus_set = search.ImageSet(config, wandb_run, query=False, cuda_idx=1)
     query_set.build_embeddings()
     corpus_set.build_embeddings()
     sbf = search.SearchBruteForce(corpus_set)
