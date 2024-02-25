@@ -5,6 +5,7 @@ path:
       root: 'data/raw'
       train: 'data/raw/train'
       test: 'data/raw/test'
+      pretrain: 'data/raw/pretrain'
     processed:
       root: 'data/processed'
       train: 'data/processed/train'
