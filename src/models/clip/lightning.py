@@ -1,25 +1,30 @@
 from torch.optim import AdamW
-from torch.nn import TripletMarginLoss
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
+from typing import Any
 
 from transformers import CLIPVisionModelWithProjection
 
-import src.data.make_dataset as md
+from src.models.losses import make_triplet_criterion
+import src.data.datasets.triplet_dataset as td
 from src import utils
 
 
 class RefConLightning(pl.LightningModule):
-    def __init__(self, args):
+    def __init__(
+        self,
+        config: dict,
+        wandb_config: dict,
+        model: CLIPVisionModelWithProjection,
+        *args: Any,
+        **kargs: Any
+        ):
         super(RefConLightning, self).__init__()
-        self.config = args['config']
-        self.wandb_config = args['wandb_config']
-        self.model = args['model']
-        self.train_indices = args['train_indices']
-        self.val_indices = args['val_indices']
-        self.dataset = args['dataset']
+        self.config = config
+        self.wandb_config = wandb_config
+        self.model = model
 
-        self.criterion = TripletMarginLoss(swap=True)
+        self.criterion = make_triplet_criterion(self.wandb_config)
     
     def forward(self, anchors, positives, negatives):
         anchors_embed = self.model(pixel_values=anchors)['image_embeds']
@@ -42,18 +47,10 @@ class RefConLightning(pl.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        optimizer = AdamW(params=self.model.parameters(), lr=self.wandb_config['lr'])
-
-        return optimizer
+        return AdamW(params=self.model.parameters(), lr=self.wandb_config['lr'])
 
     def train_dataloader(self):
-        dataset = md.RefConDataset(
-            config=self.config,
-            wandb_config=self.wandb_config,
-            dataset=self.dataset,
-            indices=self.train_indices,
-            train=True
-        )
+        dataset = td.make_train_triplet_dataset(self.config, self.wandb_config)
         
         dataloader = DataLoader(
             dataset=dataset,
@@ -66,13 +63,7 @@ class RefConLightning(pl.LightningModule):
         return dataloader
 
     def val_dataloader(self):
-        dataset = md.RefConDataset(
-            config=self.config,
-            wandb_config=self.wandb_config,
-            dataset=self.dataset,
-            indices=self.val_indices,
-            train=False
-        )
+        dataset = td.make_val_triplet_dataset(self.config, self.wandb_config)
         
         dataloader = DataLoader(
             dataset=dataset,
@@ -85,7 +76,7 @@ class RefConLightning(pl.LightningModule):
         return dataloader
 
 
-def get_model(wandb_config):
+def get_model(wandb_config) -> CLIPVisionModelWithProjection:
     model = CLIPVisionModelWithProjection.from_pretrained(
         pretrained_model_name_or_path=wandb_config['model_id'],
         ignore_mismatched_sizes=True
@@ -94,22 +85,21 @@ def get_model(wandb_config):
     return model
 
 
-if __name__ == '__main__':
+def _debug():
     config = utils.get_config()
     wandb_config = utils.init_wandb('clip.yml')
     model = get_model(wandb_config)
-    base_dataset = md.get_base_dataset(config)
-    train_indices, val_indices = md.get_train_val_indices(wandb_config, base_dataset)
 
-    args = {
+    kargs = {
         'config': config,
         'wandb_config': wandb_config,
         'model': model,
-        'train_indices': train_indices,
-        'val_indices': val_indices,
-        'dataset': base_dataset
     }
 
-    lightning = RefConLightning(args)
+    lightning = RefConLightning(**kargs)
 
-    pass
+    return 
+
+
+if __name__ == '__main__':
+    _debug()

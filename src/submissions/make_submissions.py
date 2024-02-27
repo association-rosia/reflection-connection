@@ -1,6 +1,5 @@
 import json
 import numpy as np
-import src.submissions.inference_model as im
 from src.submissions import search
 from src import utils
 import os
@@ -8,13 +7,14 @@ import os
 
 def main():
     config = utils.get_config()
-    wandb_run = utils.get_run('2khs9u4f')
-    query_set = search.ImageSet(config, wandb_run, query=True, cuda_idx=0)
-    corpus_set = search.ImageSet(config, wandb_run, query=False, cuda_idx=0)
+    wandb_run = utils.get_run('ot42ue7o')
+    query_set = search.ImageSet(config, wandb_run, query=True, cuda_idx=1)
+    corpus_set = search.ImageSet(config, wandb_run, query=False, cuda_idx=1)
     query_set.build_embeddings()
     corpus_set.build_embeddings()
     sbf = search.SearchBruteForce(corpus_set)
-    query_image_labels, distances, _, matched_labels = sbf.query(query_set)
+    metric = get_metric(wandb_run.config)
+    query_image_labels, distances, _, matched_labels = sbf.query(query_set, metric=metric)
     confidence_scores = dist_to_conf(distances)
     result_builder = ResultBuilder(config)
     result_builder = result_builder(
@@ -23,6 +23,14 @@ def main():
         confidence_scores,
         f'{wandb_run.name}-{wandb_run.id}'
     )
+
+
+def get_metric(wandb_config):
+    if wandb_config['criterion'] == 'TMWDL-Euclidean':
+        return 'l2'
+    elif wandb_config['criterion'] == 'TMWDL-Cosine':
+        return 'cosine'
+
 
 def dist_to_conf(distances: np.ndarray):
     max_dist = distances.max(axis=1).reshape(-1, 1)

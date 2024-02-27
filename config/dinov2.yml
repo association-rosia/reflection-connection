@@ -1,14 +1,14 @@
 dry: false
 
 random_state: 42
-max_epochs: 25
+max_epochs: 100
 criterion: 'TMWDL-Cosine'
 
 contrast_factor: 25
 size: 256
 crop_size: 224
 
-model_id: 'openai/clip-vit-large-patch14'
+model_id: 'facebook/dinov2-base'
 
 batch_size: 24
 
