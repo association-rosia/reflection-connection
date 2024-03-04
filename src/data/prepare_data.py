@@ -23,7 +23,7 @@ def merge_folders(folder1, folder2, destination):
     shutil.rmtree(folder2)
 
 
-def compute_image_mean_std(contrast=25):
+def compute_image_mean_std():
     config = utils.get_config()
     # TODO: Faire un processor sans croping
     wandb_config = utils.load_config('dinov2.yml')
@@ -45,11 +45,11 @@ def compute_image_mean_std(contrast=25):
         sum += torch.sum((img - mean) ** 2)
 
     std = torch.sqrt(sum / count)
-    
+
     print('mean', mean)
     print('std', std)
 
 
 if __name__ == "__main__":
-    # merge_train_val_data()
-    compute_image_mean_std()
+    merge_train_val_data()
+    # compute_image_mean_std()
