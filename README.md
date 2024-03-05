@@ -1,4 +1,4 @@
-# 🪨 Reflection Connection: Bringing New Algorithms to Old Data
+# 🪨 Reflection Connection
 
 <img src='assets/reflection-connection.png'>
 
