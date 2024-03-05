@@ -52,7 +52,7 @@ def adjust_coordinates(x0, y0, h, w, max_h, max_w):
     return x0, x1, y0, y1
 
 
-def get_tiles_coords(values, counts, num_tiles=4, max_h=1259, max_w=300):
+def get_tiles_coords(values, counts, num_tiles=8, max_h=1259, max_w=300):
     tiles_coords = []
 
     for x0 in range(0, max_h, 126):
@@ -67,21 +67,23 @@ def get_tiles_coords(values, counts, num_tiles=4, max_h=1259, max_w=300):
 
 
 def extract_tiles_from_slice(slice, volume_path, dim, slice_idx, values, counts):
-    data_processed_path = config['path']['data']['processed']['train']
+    save_pretrain_path = config['path']['data']['processed']['pretrain']
     tiles_coords = get_tiles_coords(values, counts)
     volume_name = volume_path.split('/')[-1].split('.')[0]
+    save_volume_path = os.path.join(save_pretrain_path, volume_name)
+    os.makedirs(save_volume_path, exist_ok=True)
 
-    for x0, x1, y0, y1 in tiles_coords:
+    for i, (x0, x1, y0, y1) in enumerate(tiles_coords):
         tile = slice[x0:x1, y0:y1]
         tile = normalize_pretrain_slice(tile)
         image = Image.fromarray(tile).convert('L')
-        save_image_path = os.path.join(data_processed_path, f'{volume_name}-{dim}-{slice_idx}.png')
+        save_image_path = os.path.join(save_volume_path, f'{dim}-{slice_idx}-{i}.png')
         image.save(save_image_path)
 
 
 def extract_tiles_from_volumes(config):
     values, counts = get_values_counts(config)
-    data_pretrain_path = config['path']['data']['raw']['pretrain']
+    data_pretrain_path = os.path.join(config['path']['data'], 'raw', 'pretrain')
     data_pretrain_glob = os.path.join(data_pretrain_path, '**/*.npy')
 
     for volume_path in tqdm(glob(data_pretrain_glob, recursive=True)):
@@ -98,6 +100,6 @@ def extract_tiles_from_volumes(config):
 
 if __name__ == "__main__":
     config = utils.get_config()
-    data_processed_path = config['path']['data']['processed']['train']
-    os.makedirs(data_processed_path, exist_ok=True)
+    save_pretrain_path = os.path.join(config['path']['data'], 'processed', 'pretrain')
+    os.makedirs(save_pretrain_path, exist_ok=True)
     extract_tiles_from_volumes(config)

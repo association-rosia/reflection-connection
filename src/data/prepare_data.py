@@ -9,9 +9,9 @@ import src.data.transforms as dT
 
 def merge_train_val_data():
     config = utils.get_config()
-    folder1 = os.path.join(config['path']['data']['raw']['train'], 'train')
-    folder2 = os.path.join(config['path']['data']['raw']['train'], 'test')
-    destination = config['path']['data']['raw']['train']
+    folder1 = os.path.join(config['path']['data'], 'raw', 'train', 'train')
+    folder2 = os.path.join(config['path']['data'], 'raw', 'train', 'test')
+    destination = os.path.join(config['path']['data'], 'raw', 'train')
     merge_folders(folder1, folder2, destination)
 
 
@@ -28,7 +28,8 @@ def compute_image_mean_std():
     # TODO: Faire un processor sans croping
     wandb_config = utils.load_config('dinov2.yml')
     processor = dT.make_eval_processor(config, wandb_config)
-    dataset = ImageFolder(config['path']['data']['raw']['train'], transform=processor)
+    dataset = ImageFolder(os.path.join(config['path']['data'], 'raw', 'train'), transform=processor)
+
     # All images have not the same shape
     sum = torch.tensor(0.)
     count = torch.tensor(0.)
