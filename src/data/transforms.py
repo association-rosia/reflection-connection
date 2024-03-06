@@ -23,11 +23,6 @@ class RefConfProcessor:
         self.mode = mode
         self.random_resized_crop = transforms.RandomResizedCrop(size=self.wandb_config['crop_size'], interpolation=tvF.InterpolationMode.BICUBIC)
 
-    
-    @overload
-    def preprocess_image(self, images: Image.Image) -> torch.Tensor: ...
-    @overload
-    def preprocess_image(self, images: list[Image.Image]) -> torch.Tensor: ...
     def preprocess_image(self, images: Image.Image | list[Image.Image]) -> torch.Tensor:
         if isinstance(images, list):
             return torch.stack([self._preprocess_image(image) for image in images])
@@ -46,6 +41,8 @@ class RefConfProcessor:
         image = self._maybe_to_tensor(image)
         image = tvF.adjust_contrast(image, contrast_factor=self.wandb_config['contrast_factor'])
         # https://github.com/facebookresearch/dinov2/blob/e1277af2ba9496fbadf7aec6eba56e8d882d1e35/dinov2/data/transforms.py#L58
+        # Add Random Horizontal flip
+        # Add Random Contrast 
         image = self.random_resized_crop(image)
         image = tvF.normalize(image, mean=self.config['data']['mean'], std=self.config['data']['std'])
         

@@ -1,7 +1,11 @@
 name: reflection-connection-env
+channels:
+  - conda-forge
 dependencies:
   - python=3.10.*
+  - faiss-gpu
   - pip
+
   - pip:
       - jupyter
       - pyyaml
