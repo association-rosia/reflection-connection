@@ -13,7 +13,7 @@ import src.utils as utils
 
 def get_values_counts(config):
     shapes = []
-    data_train_path = config['path']['data']['raw']['train']
+    data_train_path = os.path.join(config['path']['data'], 'raw', 'train')
     data_train_glob = os.path.join(data_train_path, '**/*.png')
 
     for image_path in glob(data_train_glob, recursive=True):
@@ -52,7 +52,7 @@ def adjust_coordinates(x0, y0, h, w, max_h, max_w):
     return x0, x1, y0, y1
 
 
-def get_tiles_coords(values, counts, num_tiles=8, max_h=1259, max_w=300):
+def get_tiles_coords(values, counts, num_tiles=15, max_h=1259, max_w=300):
     tiles_coords = []
 
     for x0 in range(0, max_h, 126):
@@ -67,7 +67,7 @@ def get_tiles_coords(values, counts, num_tiles=8, max_h=1259, max_w=300):
 
 
 def extract_tiles_from_slice(slice, volume_path, dim, slice_idx, values, counts):
-    save_pretrain_path = config['path']['data']['processed']['pretrain']
+    save_pretrain_path = os.path.join(config['path']['data'], 'processed', 'pretrain')
     tiles_coords = get_tiles_coords(values, counts)
     volume_name = volume_path.split('/')[-1].split('.')[0]
     save_volume_path = os.path.join(save_pretrain_path, volume_name)
