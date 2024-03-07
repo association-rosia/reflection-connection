@@ -116,7 +116,6 @@ def extract_tiles_from_volumes(config):
             extract_tiles_from_slice(slice, save_volume_path, 1, slice_idx, values, counts)
 
         split_tiles(save_volume_path, volume_name)
-        # sys.exit(0)
 
 
 def init_folders(config):
