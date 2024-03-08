@@ -8,7 +8,7 @@ import pytorch_lightning as pl
 import torch
 import wandb
 
-import src.models.dinov2.lightning as dinov2_l
+import src.models.vit.lightning as vit_l
 from src import utils
 
 warnings.filterwarnings('ignore')
@@ -17,7 +17,7 @@ torch.set_float32_matmul_precision('medium')
 
 def main():
     config = utils.get_config()
-    wandb_config = utils.init_wandb('dinov2.yml')
+    wandb_config = utils.init_wandb('vit.yml')
     trainer = get_trainer(config)
     lightning = get_lightning(config, wandb_config)
     trainer.fit(model=lightning)
@@ -25,12 +25,12 @@ def main():
 
 
 def get_trainer(config):
-    os.makedirs(config['path']['models']['root'], exist_ok=True)
+    os.makedirs(config['path']['models'], exist_ok=True)
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
         save_top_k=1,
         monitor='val/loss',
         mode='min',
-        dirpath=config['path']['models']['root'],
+        dirpath=config['path']['models'],
         filename=f'{wandb.run.name}-{wandb.run.id}',
         auto_insert_metric_name=False,
         verbose=True
@@ -51,7 +51,6 @@ def get_trainer(config):
             devices=1,
             max_epochs=wandb.config.max_epochs,
             logger=pl.loggers.WandbLogger(),
-            strategy='ddp_find_unused_parameters_true',
             callbacks=[checkpoint_callback],
             precision='16-mixed'
         )
@@ -60,7 +59,7 @@ def get_trainer(config):
 
 
 def get_lightning(config, wandb_config, checkpoint=None):
-    model = dinov2_l.get_model(wandb_config)
+    model = vit_l.get_model(wandb_config)
 
     kargs = {
         'config': config,
@@ -69,10 +68,10 @@ def get_lightning(config, wandb_config, checkpoint=None):
     }
 
     if checkpoint is None:
-        lightning = dinov2_l.RefConLightning(**kargs)
+        lightning = vit_l.RefConLightning(**kargs)
     else:
-        path_checkpoint = os.path.join(config['path']['models']['root'], checkpoint)
-        lightning = dinov2_l.RefConLightning.load_from_checkpoint(path_checkpoint, **kargs)
+        path_checkpoint = os.path.join(config['path']['models'], checkpoint)
+        lightning = vit_l.RefConLightning.load_from_checkpoint(path_checkpoint, **kargs)
 
     return lightning
 

@@ -38,7 +38,7 @@ def get_config() -> dict:
 
 def init_wandb(yml_file: str) -> dict:
     config = get_config()
-    wandb_dir = get_notebooks_path(config['path']['logs']['root'])
+    wandb_dir = get_notebooks_path(config['path']['logs'])
     os.makedirs(wandb_dir, exist_ok=True)
     os.environ["WANDB_DIR"] = os.path.abspath(wandb_dir)
     
