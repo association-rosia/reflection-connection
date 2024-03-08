@@ -5,6 +5,7 @@ from torch.utils.data import Dataset
 from torchvision.datasets import ImageFolder
 import src.data.transforms as dT
 from src import utils
+import os
 
 
 class RefConTripletDataset(Dataset):
@@ -74,7 +75,7 @@ def get_train_val_indices(wandb_config, dataset: ImageFolder):
 
 
 def make_image_folder_dataset(config):
-    path = config['path']['data']['raw']['train']
+    path = os.path.join(config['path']['data'], 'raw', 'train')
     path = utils.get_notebooks_path(path)
     
     return ImageFolder(path)

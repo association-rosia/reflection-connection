@@ -1,3 +1,6 @@
+import warnings
+warnings.filterwarnings('ignore')
+
 import os
 import warnings
 
@@ -22,12 +25,12 @@ def main():
 
 
 def get_trainer(config):
-    os.makedirs(config['path']['models']['root'], exist_ok=True)
+    os.makedirs(config['path']['models'], exist_ok=True)
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
         save_top_k=1,
         monitor='val/loss',
         mode='min',
-        dirpath=config['path']['models']['root'],
+        dirpath=config['path']['models'],
         filename=f'{wandb.run.name}-{wandb.run.id}',
         auto_insert_metric_name=False,
         verbose=True
@@ -66,7 +69,7 @@ def get_lightning(config, wandb_config, checkpoint=None):
     if checkpoint is None:
         lightning = clip_l.RefConLightning(**kargs)
     else:
-        path_checkpoint = os.path.join(config['path']['models']['root'], checkpoint)
+        path_checkpoint = os.path.join(config['path']['models'], checkpoint)
         lightning = clip_l.RefConLightning.load_from_checkpoint(path_checkpoint, **kargs)
 
     return lightning
