@@ -1,7 +1,8 @@
-import torch
-from typing import Self, overload
-import numpy as np
+from typing import overload
+from typing_extensions import Self
 from numpy._typing import ArrayLike
+import torch
+import numpy as np
 import faiss
 
 
@@ -34,7 +35,7 @@ class FaissRetriever:
         if len(embeddings.shape) == 1:
             embeddings = np.expand_dims(embeddings, axis=0)
         embeddings = embeddings.astype(np.float32)
-        embeddings = faiss.normalize_L2(embeddings)
+        faiss.normalize_L2(embeddings)
         
         return embeddings
     
@@ -52,12 +53,13 @@ class FaissRetriever:
     @overload
     def add_to_index(self, embeddings: np.ndarray | torch.Tensor, labels: ArrayLike) -> Self: ...
     def add_to_index(self, embeddings: np.ndarray | torch.Tensor, labels: ArrayLike) -> Self:
-        embeddings = self._preprocess_embeddings(embeddings)
-        index = self._make_index()
         if labels is not None:
             assert embeddings.shape[0] == len(labels)
             self.labels = np.concatenate([self.labels, labels], axis=0)
-        
+
+        embeddings = self._preprocess_embeddings(embeddings)
+        index = self._make_index()
+
         index.add(embeddings)
         if self.index.ntotal == 0:
             self.index = index
@@ -93,11 +95,31 @@ class FaissRetriever:
 #     def __call__(self, *args, **kwargs) -> Any:
 #         return self.query(*args, **kwargs)
 
+def _debug():
+    from src import utils
+    from src.models.inference import InferenceModel, EmbeddingsBuilder
+    import os
+    
+    config = utils.get_config()
+    wandb_run = utils.get_run('bop11imv')
+    model = InferenceModel.load_from_wandb_run(config, wandb_run, 'cpu')
+    embeddings_builder = EmbeddingsBuilder(device=0, return_names=True)
+    query_folder_path = os.path.join(config['path']['data'], 'raw', 'train')
+    corpus_folder_path = os.path.join(config['path']['data'], 'raw', 'train')
+    corpus_embeddings, corpus_names = embeddings_builder.build_embeddings(model=model, folder_path=corpus_folder_path, return_names=True)
+    query_embeddings, query_names = embeddings_builder.build_embeddings(model=model, folder_path=query_folder_path, return_names=True)
 
-# if __name__ == '__main__':
-#     config = utils.get_config()
-#     wandb_run = utils.get_run('2khs9u4f')
+    del model, embeddings_builder
+    torch.cuda.empty_cache()
+    
+    retriever = FaissRetriever(embeddings_size=corpus_embeddings.shape[1])
+    retriever.add_to_index(corpus_embeddings, corpus_names)
+    cosine_distance, corpus_names_retrived = retriever.query(query_embeddings, k=3)
+    
+    return 0
 
+if __name__ == '__main__':
+    _debug()
 #     query_set = ImageSet(config, wandb_run, query=True, cuda_idx=0)
 #     corpus_set = ImageSet(config, wandb_run, query=False, cuda_idx=0)
 #     query_set.build_embeddings()

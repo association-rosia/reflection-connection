@@ -1,5 +1,6 @@
 import os
 from typing import overload
+from typing_extensions import Self
 from importlib import import_module
 from tqdm.autonotebook import tqdm
 from glob import glob
@@ -65,7 +66,7 @@ class InferenceModel:
         cls,
         config: dict,
         wandb_run: wandb_api.Run | utils.RunDemo,
-        map_location):
+        map_location) -> Self:
         model = cls._load_model(config, wandb_run, map_location)
         self = cls(config, wandb_run.config, model, map_location)
         
@@ -109,13 +110,13 @@ class InferenceModel:
 class EmbeddingsBuilder:
     def __init__(self,
                  device: int | str = 0,
-                 return_labels: bool = True,
+                 return_names: bool = True,
                  ) -> None:
         if isinstance(device, int):
             self.device = f'cuda:{device}'
         else:
             self.device = device
-        self.return_labels = return_labels
+        self.return_names = return_names
 
     def _load_model(self, config, wandb_run):
         return InferenceModel.load_from_wandb_run(config, wandb_run, self.device)
@@ -140,13 +141,13 @@ class EmbeddingsBuilder:
             return Image.open(f).convert(mode='RGB')
 
     @overload
-    def build_embeddings(self, model: InferenceModel, folder_path: str, return_names: bool): ...
+    def build_embeddings(self, model: InferenceModel, folder_path: str, return_names: bool = None): ...
     @overload
-    def build_embeddings(self, model: InferenceModel, list_paths: list[str], return_names: bool): ...
+    def build_embeddings(self, model: InferenceModel, list_paths: list[str], return_names: bool = None): ...
     @overload
-    def build_embeddings(self, config: dict, wandb_run: wandb_api.Run | utils.RunDemo, folder_path: str, return_names: bool): ...
+    def build_embeddings(self, config: dict, wandb_run: wandb_api.Run | utils.RunDemo, folder_path: str, return_names: bool = None): ...
     @overload
-    def build_embeddings(self, config: dict, wandb_run: wandb_api.Run | utils.RunDemo, list_paths: list[str], return_names: bool): ...
+    def build_embeddings(self, config: dict, wandb_run: wandb_api.Run | utils.RunDemo, list_paths: list[str], return_names: bool = None): ...
     def build_embeddings(self, model = None, config = None, wandb_run = None, folder_path = None, list_paths = None, return_names = False):
         model = self._get_model(model, config, wandb_run)
 
@@ -162,7 +163,7 @@ class EmbeddingsBuilder:
             names.append(os.path.basename(img_path))
         embeddings = torch.stack(embeddings)
         
-        if return_names:
+        if (return_names is None and self.return_names) or return_names:
             return embeddings, names
         else:
             return embeddings
@@ -172,7 +173,7 @@ def _debug():
     config = utils.get_config()
     wandb_run = utils.get_run('bop11imv')
     model = InferenceModel.load_from_wandb_run(config, wandb_run, 'cpu')
-    embeddings_builder = EmbeddingsBuilder(device=0, return_labels=True)
+    embeddings_builder = EmbeddingsBuilder(device=0, return_names=True)
     folder_path = os.path.join(config['path']['data'], 'raw', 'train')
     embeddings_builder.build_embeddings(model=model, folder_path=folder_path)
 
