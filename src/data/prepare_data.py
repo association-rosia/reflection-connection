@@ -1,10 +1,12 @@
 import os
 import shutil
+
 import torch
-from src import utils
-from tqdm.autonotebook import tqdm
 from torchvision.datasets import ImageFolder
+from tqdm.autonotebook import tqdm
+
 import src.data.transforms as dT
+from src import utils
 
 
 def merge_train_val_data():

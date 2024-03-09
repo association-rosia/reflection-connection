@@ -1,4 +1,6 @@
 import json
+import os
+
 import numpy as np
 from src.models.retriever import FaissRetriever
 from src.models.inference import InferenceModel
@@ -28,7 +30,7 @@ def main():
     
     # Create submission file
     result_builder = ResultBuilder(config)
-    result_builder = result_builder(
+    result_builder(
         query_image_labels,
         matched_labels,
         confidence_scores,
@@ -46,10 +48,9 @@ def get_metric(wandb_config):
 def dist_to_conf(distances: np.ndarray):
     max_dist = distances.max(axis=1).reshape(-1, 1)
     min_dist = distances.min(axis=1).reshape(-1, 1)
-
-    distances_normalized = (distances - min_dist)/max_dist
+    distances_normalized = (distances - min_dist) / max_dist
     confidence_from_dist = 1 - distances_normalized
-    
+
     return confidence_from_dist
 
 

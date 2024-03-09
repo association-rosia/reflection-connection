@@ -1,11 +1,12 @@
-import numpy as np
-from PIL import Image
-import torch
-import torch.nn.functional as tF
-import torchvision.transforms.functional as tvF
-from torchvision import transforms
-from typing import overload
 from enum import Enum
+from typing import overload
+
+import numpy as np
+import torch
+import torchvision.transforms.functional as tvF
+from PIL import Image
+from torchvision import transforms
+
 
 class ProcessorMode(Enum):
     """Processor modes
@@ -21,7 +22,16 @@ class RefConfProcessor:
         self.config = config
         self.wandb_config = wandb_config
         self.mode = mode
-        self.random_resized_crop = transforms.RandomResizedCrop(size=self.wandb_config['crop_size'], interpolation=tvF.InterpolationMode.BICUBIC)
+        self.random_resized_crop = transforms.RandomResizedCrop(size=self.wandb_config['crop_size'],
+                                                                interpolation=tvF.InterpolationMode.BICUBIC)
+
+    @overload
+    def preprocess_image(self, images: Image.Image) -> torch.Tensor:
+        ...
+
+    @overload
+    def preprocess_image(self, images: list[Image.Image]) -> torch.Tensor:
+        ...
 
     def preprocess_image(self, images: Image.Image | list[Image.Image]) -> torch.Tensor:
         if isinstance(images, list):
@@ -36,7 +46,7 @@ class RefConfProcessor:
             return self._preprocess_eval_image(image)
         else:
             raise ValueError(f'Mode have an incorrect value')
-    
+
     def _preprocess_training_image(self, image: torch.Tensor | np.ndarray | Image.Image) -> torch.Tensor:
         image = self._maybe_to_tensor(image)
         image = tvF.adjust_contrast(image, contrast_factor=self.wandb_config['contrast_factor'])
@@ -45,9 +55,9 @@ class RefConfProcessor:
         # Add Random Contrast 
         image = self.random_resized_crop(image)
         image = tvF.normalize(image, mean=self.config['data']['mean'], std=self.config['data']['std'])
-        
+
         return image
-    
+
     def _preprocess_eval_image(self, image: torch.Tensor | np.ndarray | Image.Image) -> torch.Tensor:
         image = self._maybe_to_tensor(image)
         image = tvF.adjust_contrast(image, contrast_factor=self.wandb_config['contrast_factor'])
@@ -56,15 +66,15 @@ class RefConfProcessor:
         if self.wandb_config.get('crop_size') is not None:
             image = tvF.center_crop(image, output_size=self.wandb_config['crop_size'])
         image = tvF.normalize(image, mean=self.config['data']['mean'], std=self.config['data']['std'])
-        
-        return image     
+
+        return image
 
     @staticmethod
     def _maybe_to_tensor(pic: torch.Tensor | np.ndarray | Image.Image) -> torch.Tensor:
         if isinstance(pic, torch.Tensor):
             return pic
         return tvF.to_tensor(pic)
-    
+
     def __call__(self, image: Image.Image | list[Image.Image]) -> torch.Tensor:
         return self.preprocess_image(image)
 
@@ -79,6 +89,7 @@ def make_eval_processor(config, wandb_config):
 
 if __name__ == '__main__':
     from src import utils
+
     config = utils.get_config()
     wandb_config = utils.load_config('clip.yml')
     make_training_processor(config, wandb_config)

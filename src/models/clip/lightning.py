@@ -1,4 +1,9 @@
+import warnings
+
+warnings.filterwarnings('ignore')
+
 from torch.optim import AdamW
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 from typing import Any
@@ -12,28 +17,28 @@ from src import utils
 
 class RefConLightning(pl.LightningModule):
     def __init__(
-        self,
-        config: dict,
-        wandb_config: dict,
-        model: CLIPVisionModelWithProjection,
-        *args: Any,
-        **kargs: Any
-        ):
+            self,
+            config: dict,
+            wandb_config: dict,
+            model: CLIPVisionModelWithProjection,
+            *args: Any,
+            **kargs: Any
+    ):
         super(RefConLightning, self).__init__()
         self.config = config
         self.wandb_config = wandb_config
         self.model = model
 
         self.criterion = make_triplet_criterion(self.wandb_config)
-    
+
     def forward(self, anchors, positives, negatives):
         anchors_embed = self.model(pixel_values=anchors)['image_embeds']
         positives_embed = self.model(pixel_values=positives)['image_embeds']
         negatives_embed = self.model(pixel_values=negatives)['image_embeds']
         loss = self.criterion(anchors_embed, positives_embed, negatives_embed)
-        
+
         return loss
-        
+
     def training_step(self, batch):
         loss = self.forward(*batch)
         self.log('train/loss', loss, on_epoch=True, sync_dist=True)
@@ -47,11 +52,18 @@ class RefConLightning(pl.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        return AdamW(params=self.model.parameters(), lr=self.wandb_config['lr'])
+        optimizer = AdamW(params=self.model.parameters(), lr=self.wandb_config['lr'])
+        scheduler = {
+            'scheduler': ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10, verbose=True),
+            'monitor': 'val/loss',
+            'interval': 'epoch',
+            'frequency': 1
+        }
+        return [optimizer], [scheduler]
 
     def train_dataloader(self):
         dataset = td.make_train_triplet_dataset(self.config, self.wandb_config)
-        
+
         dataloader = DataLoader(
             dataset=dataset,
             batch_size=self.wandb_config['batch_size'],
@@ -64,7 +76,7 @@ class RefConLightning(pl.LightningModule):
 
     def val_dataloader(self):
         dataset = td.make_val_triplet_dataset(self.config, self.wandb_config)
-        
+
         dataloader = DataLoader(
             dataset=dataset,
             batch_size=self.wandb_config['batch_size'],
@@ -98,7 +110,7 @@ def _debug():
 
     lightning = RefConLightning(**kargs)
 
-    return 
+    return
 
 
 if __name__ == '__main__':
