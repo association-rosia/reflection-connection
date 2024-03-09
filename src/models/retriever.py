@@ -69,43 +69,17 @@ class FaissRetriever:
         return self
 
 
-# class SearchBruteForce:
-#     def __init__(self, corpus_set: ImageSet) -> None:
-#         embeddings = corpus_set.get_embeddings()
-#         self.corpus_embedings = np.stack([embedding[0].numpy(force=True) for embedding in embeddings])
-#         self.corpus_labels = np.stack([embedding[1] for embedding in embeddings])
-        
-#     def query(self, query_set: ImageSet, metric: str = 'l2', k: int = 3) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-#         embeddings = query_set.get_embeddings()
-#         query_embedings = np.stack([embedding[0].numpy(force=True) for embedding in embeddings])
-#         query_labels = np.stack([embedding[1] for embedding in embeddings])
-        
-#         matrix_distances = pairwise_distances(query_embedings, self.corpus_embedings, metric=metric, n_jobs=-1)
-#         indices = []
-#         distances = []
-#         for query_distances in matrix_distances:
-#             indices.append(np.argsort(query_distances)[:k])
-#             distances.append(query_distances[indices[-1]])
-        
-#         distances = np.stack(distances)
-#         indices = np.stack(indices)
-        
-#         return query_labels, distances, self.corpus_embedings[indices], self.corpus_labels[indices]
-    
-#     def __call__(self, *args, **kwargs) -> Any:
-#         return self.query(*args, **kwargs)
-
 def _debug():
     from src import utils
     from src.models.inference import InferenceModel, EmbeddingsBuilder
     import os
     
     config = utils.get_config()
-    wandb_run = utils.get_run('bop11imv')
+    wandb_run = utils.get_run('96t0rkbl')
     model = InferenceModel.load_from_wandb_run(config, wandb_run, 'cpu')
     embeddings_builder = EmbeddingsBuilder(device=0, return_names=True)
-    query_folder_path = os.path.join(config['path']['data'], 'raw', 'train')
-    corpus_folder_path = os.path.join(config['path']['data'], 'raw', 'train')
+    query_folder_path = os.path.join(config['path']['data'], 'raw', 'test', 'query')
+    corpus_folder_path = os.path.join(config['path']['data'], 'raw', 'test', 'image_corpus')
     corpus_embeddings, corpus_names = embeddings_builder.build_embeddings(model=model, folder_path=corpus_folder_path, return_names=True)
     query_embeddings, query_names = embeddings_builder.build_embeddings(model=model, folder_path=query_folder_path, return_names=True)
 
@@ -118,11 +92,6 @@ def _debug():
     
     return 0
 
+
 if __name__ == '__main__':
     _debug()
-#     query_set = ImageSet(config, wandb_run, query=True, cuda_idx=0)
-#     corpus_set = ImageSet(config, wandb_run, query=False, cuda_idx=0)
-#     query_set.build_embeddings()
-#     corpus_set.build_embeddings()
-#     # sbf = SearchBruteForce(corpus_set)
-#     # sbf.query(query_set)

@@ -171,7 +171,7 @@ class EmbeddingsBuilder:
 
 def _debug():
     config = utils.get_config()
-    wandb_run = utils.get_run('bop11imv')
+    wandb_run = utils.get_run('96t0rkbl')
     model = InferenceModel.load_from_wandb_run(config, wandb_run, 'cpu')
     embeddings_builder = EmbeddingsBuilder(device=0, return_names=True)
     folder_path = os.path.join(config['path']['data'], 'raw', 'train')
