@@ -7,10 +7,9 @@ import faiss
 
 
 class FaissRetriever:
-    def __init__(self, embeddings_size: int, metric: str = 'cosine', use_gpu: bool = False) -> None:
+    def __init__(self, embeddings_size: int, metric: str = 'cosine') -> None:
         self.metric = metric
         self.embeddings_size = embeddings_size
-        self.use_gpu = use_gpu
         self.index = self._make_index()
         self.labels = np.array([])
         
@@ -23,8 +22,6 @@ class FaissRetriever:
     def _make_index(self):
         faiss_metric = self._get_faiss_metric()
         index = faiss.index_factory(self.embeddings_size, "Flat", faiss_metric)
-        if self.use_gpu:
-            index = faiss.index_cpu_to_all_gpus(index)
         
         return index
 
