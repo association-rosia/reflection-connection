@@ -1,15 +1,15 @@
-dry: true
+dry: false
 
 random_state: 42
-max_epochs: 100
+max_epochs: 1000
 criterion: 'TMWDL-Cosine'
 
 contrast_factor: 25
 size: 256
 crop_size: 224
 
-model_id: 'ViT_B_16_SEISMIC31K_SGD'
+model_id: 'ViT_L_16_SEISMIC31K_SGD'
 
 batch_size: 16
 
-lr: 0.001
+lr: 0.00001

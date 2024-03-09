@@ -1,4 +1,8 @@
+import warnings
+warnings.filterwarnings('ignore')
+
 from torch.optim import AdamW
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 from typing import Any
@@ -47,7 +51,14 @@ class RefConLightning(pl.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        return AdamW(params=self.model.parameters(), lr=self.wandb_config['lr'])
+        optimizer = AdamW(params=self.model.parameters(), lr=self.wandb_config['lr'])
+        scheduler = {
+            'scheduler': ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10, verbose=True),
+            'monitor': 'val/loss',
+            'interval': 'epoch',
+            'frequency': 1
+        }
+        return [optimizer], [scheduler]
 
     def train_dataloader(self):
         dataset = td.make_train_triplet_dataset(self.config, self.wandb_config)

@@ -12,4 +12,4 @@ model_id: 'facebook/dinov2-base'
 
 batch_size: 24
 
-lr: 0.0000001
+lr: 0.00001

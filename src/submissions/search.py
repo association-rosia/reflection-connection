@@ -25,9 +25,9 @@ class ImageSet:
         self.embeddings = None
 
         if query:
-            path = os.path.join(config['path']['data']['raw']['test'], 'query')
+            path = os.path.join(config['path']['data'], 'raw', 'test', 'query')
         else:
-            path = os.path.join(config['path']['data']['raw']['test'], 'image_corpus')
+            path = os.path.join(config['path']['data'], 'raw', 'test', 'image_corpus')
 
         self.path = utils.get_notebooks_path(path)
         self.names = os.listdir(self.path)
