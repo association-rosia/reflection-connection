@@ -1,14 +1,16 @@
 import os
-import torch
 from typing import Any
+
 import numpy as np
+import torch
 import wandb.apis.public as wandb_api
+from PIL import Image
+from sklearn.metrics.pairwise import pairwise_distances
+from torchvision.datasets.folder import default_loader
+from tqdm.autonotebook import tqdm
+
 import src.submissions.inference_model as im
 from src import utils
-from PIL import Image
-from torchvision.datasets.folder import default_loader
-from sklearn.metrics.pairwise import pairwise_distances
-from tqdm.autonotebook import tqdm
 
 
 class ImageSet:
@@ -34,28 +36,28 @@ class ImageSet:
 
     def _load_model(self):
         return im.RefConInferenceModel.load_from_wandb_run(self.config, self.wandb_run, self.cuda_idx)
-    
+
     def build_embeddings(self):
         model = self._load_model()
         self.embeddings = []
         for img, name in tqdm(self):
             embedding = model(img)
             self.embeddings.append((embedding, name))
-        
+
         del model
         torch.cuda.empty_cache()
-        
+
         return self
-        
+
     def get_embeddings(self) -> list[tuple[torch.Tensor, str]]:
         if self.embeddings is None:
             raise RuntimeError('Embedding collection is empty. Run self.build_embeddings() method to build it')
-        
+
         return self.embeddings
-    
+
     def __len__(self):
         return len(self.names)
-        
+
     def __getitem__(self, index: int) -> tuple[Image.Image, str]:
         """
         Args:
@@ -77,24 +79,25 @@ class SearchBruteForce:
         embeddings = corpus_set.get_embeddings()
         self.corpus_embedings = np.stack([embedding[0].numpy(force=True) for embedding in embeddings])
         self.corpus_labels = np.stack([embedding[1] for embedding in embeddings])
-        
-    def query(self, query_set: ImageSet, metric: str = 'l2', k: int = 3) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+
+    def query(self, query_set: ImageSet, metric: str = 'l2', k: int = 3) -> tuple[
+        np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         embeddings = query_set.get_embeddings()
         query_embedings = np.stack([embedding[0].numpy(force=True) for embedding in embeddings])
         query_labels = np.stack([embedding[1] for embedding in embeddings])
-        
+
         matrix_distances = pairwise_distances(query_embedings, self.corpus_embedings, metric=metric, n_jobs=-1)
         indices = []
         distances = []
         for query_distances in matrix_distances:
             indices.append(np.argsort(query_distances)[:k])
             distances.append(query_distances[indices[-1]])
-        
+
         distances = np.stack(distances)
         indices = np.stack(indices)
-        
+
         return query_labels, distances, self.corpus_embedings[indices], self.corpus_labels[indices]
-    
+
     def __call__(self, *args, **kwargs) -> Any:
         return self.query(*args, **kwargs)
 

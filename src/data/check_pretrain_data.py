@@ -1,7 +1,9 @@
 import os
-from tqdm.auto import tqdm
 from glob import glob
+
 import numpy as np
+from tqdm.auto import tqdm
+
 import src.utils as utils
 
 

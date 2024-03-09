@@ -1,5 +1,5 @@
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
 
 
 def make_triplet_criterion(wandb_config):

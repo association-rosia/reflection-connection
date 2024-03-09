@@ -1,8 +1,10 @@
 import json
-import numpy as np
-from src.submissions import search
-from src import utils
 import os
+
+import numpy as np
+
+from src import utils
+from src.submissions import search
 
 
 def main():

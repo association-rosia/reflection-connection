@@ -1,17 +1,15 @@
 import os
 import random
-import sys
+import shutil
 from glob import glob
 
 import cv2
 import numpy as np
 from PIL import Image
+from sklearn.model_selection import train_test_split
 from tqdm import tqdm
-import shutil
 
 import src.utils as utils
-
-from sklearn.model_selection import train_test_split
 
 
 def get_values_counts(config):
