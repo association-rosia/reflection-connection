@@ -18,6 +18,8 @@ def _import_module_lightning(model_id):
         return import_module('src.models.clip.lightning')
     elif 'dinov2' in model_id:
         return import_module('src.models.dinov2.lightning')
+    elif 'ViT' in model_id:
+        return import_module('src.models.vit.lightning')
     
 
 def load_lightning_model(config, wandb_run, map_location):
@@ -30,39 +32,42 @@ def load_lightning_model(config, wandb_run, map_location):
         'model': model,
     }
 
-    path_checkpoint = os.path.join(config['path']['models']['root'], f'{wandb_run.name}-{wandb_run.id}.ckpt')
+    path_checkpoint = os.path.join(config['path']['models'], f'{wandb_run.name}-{wandb_run.id}.ckpt')
     path_checkpoint = utils.get_notebooks_path(path_checkpoint)
     lightning = module_lightning.RefConLightning.load_from_checkpoint(path_checkpoint, map_location=map_location, **kargs)
     
     return lightning
 
 
-class InferenceModel(torch.nn.Module):
+class InferenceModel:
     def __init__(self,
                  config: dict,
                  wandb_config: dict,
                  model: torch.nn.Module,
+                 device: str
                 ) -> None:
-        super().__init__()
         
         self.config = config
         self.wandb_config = wandb_config
         self.model = model
+        self.device = device
+        self.dtype = torch.float32
         self.processor = dT.make_eval_processor(config, self.wandb_config)
-        self.to(dtype=torch.float16, device=self.model.device)
-        self.eval()
+        self.model.to(dtype=self.dtype, device=device)
+        self.model.eval()
+        
+    def to(self, device):
+        self.device = device
+        self.model.to(device=device)
         
     @classmethod
     def load_from_wandb_run(
         cls,
         config: dict,
         wandb_run: wandb_api.Run | utils.RunDemo,
-        cuda_idx):
-        
-        map_location = f'cuda:{cuda_idx}'
+        map_location):
         model = cls._load_model(config, wandb_run, map_location)
-        self = cls(config, wandb_run.config, model)
-        self.to(dtype=torch.float16, device=self.model.device)
+        self = cls(config, wandb_run.config, model, map_location)
         
         return self
     
@@ -77,12 +82,14 @@ class InferenceModel(torch.nn.Module):
         if isinstance(images, Image.Image):
             images = [images]
         pixel_values = self.processor.preprocess_image(images)
+        pixel_values = pixel_values.to(device=self.device, dtype=self.dtype)
 
-        pixel_values = pixel_values.to(device=self.model.device)
         if 'clip' in self.wandb_config['model_id']:
             embeddings = self._clip_forward(pixel_values)
         elif 'dinov2' in self.wandb_config['model_id']:
             embeddings = self._dinov2_forward(pixel_values)
+        elif 'ViT' in self.wandb_config['model_id']:
+            embeddings = self._vit_forward(pixel_values)
         
         return embeddings.squeeze(dim=0).cpu()
     
@@ -91,24 +98,35 @@ class InferenceModel(torch.nn.Module):
 
     def _dinov2_forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
         return self.model(pixel_values)['pooler_output']
+    
+    def _vit_forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
+        return self.model(pixel_values)
+    
+    def __call__(self, images: list[Image.Image] | Image.Image) -> torch.Tensor:
+        return self.forward(images)
 
 
 class EmbeddingsBuilder:
     def __init__(self,
-                 cuda_idx: int = 0,
+                 device: int | str = 0,
                  return_labels: bool = True,
                  ) -> None:
-        self.cuda_idx = cuda_idx
+        if isinstance(device, int):
+            self.device = f'cuda:{device}'
+        else:
+            self.device = device
         self.return_labels = return_labels
 
     def _load_model(self, config, wandb_run):
-        return InferenceModel.load_from_wandb_run(config, wandb_run, self.cuda_idx)
+        return InferenceModel.load_from_wandb_run(config, wandb_run, self.device)
     
     def _get_model(self, model = None, config = None, wandb_run = None):
         if model is None:
-            return self._load_model(config, wandb_run)
+            model = self._load_model(config, wandb_run)
         else:
-            return model.to(device=f'cuda:{self.cuda_idx}')
+            model.to(device=self.device)
+        
+        return model
     
     @staticmethod
     def _make_list_paths(folder_path):
@@ -131,7 +149,7 @@ class EmbeddingsBuilder:
     def build_embeddings(self, config: dict, wandb_run: wandb_api.Run | utils.RunDemo, list_paths: list[str], return_names: bool): ...
     def build_embeddings(self, model = None, config = None, wandb_run = None, folder_path = None, list_paths = None, return_names = False):
         model = self._get_model(model, config, wandb_run)
-        
+
         # Si la liste des images n'est pas fournie, récupère la liste de toutes les images du folder
         if list_paths is None:
             list_paths = self._make_list_paths(folder_path)
@@ -144,9 +162,6 @@ class EmbeddingsBuilder:
             names.append(os.path.basename(img_path))
         embeddings = torch.stack(embeddings)
         
-        del model
-        torch.cuda.empty_cache()
-        
         if return_names:
             return embeddings, names
         else:
@@ -155,10 +170,11 @@ class EmbeddingsBuilder:
 
 def _debug():
     config = utils.get_config()
-    wandb_run = utils.get_run('sxa0zzzr')
-    model = InferenceModel.load_from_wandb_run(config, wandb_run, 0)
-    embeddings_builder = EmbeddingsBuilder(cuda_idx=0, return_labels=True)
-    embeddings_builder.build_embeddings(model=model, folder_path=config['path']['data']['raw']['train'])
+    wandb_run = utils.get_run('bop11imv')
+    model = InferenceModel.load_from_wandb_run(config, wandb_run, 'cpu')
+    embeddings_builder = EmbeddingsBuilder(device=0, return_labels=True)
+    folder_path = os.path.join(config['path']['data'], 'raw', 'train')
+    embeddings_builder.build_embeddings(model=model, folder_path=folder_path)
 
     del model, embeddings_builder
     torch.cuda.empty_cache()
