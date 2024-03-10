@@ -51,6 +51,8 @@ class RefConfProcessor:
         image = self._maybe_to_tensor(image)
         image = tvF.adjust_contrast(image, contrast_factor=self.wandb_config['contrast_factor'])
         # https://github.com/facebookresearch/dinov2/blob/e1277af2ba9496fbadf7aec6eba56e8d882d1e35/dinov2/data/transforms.py#L58
+        # Add Random Horizontal flip
+        # Add Random Contrast 
         image = self.random_resized_crop(image)
         image = tvF.normalize(image, mean=self.config['data']['mean'], std=self.config['data']['std'])
 
