@@ -19,7 +19,7 @@ def main():
             os.rename(folder_path, new_folder_path)
 
             for i, image in tqdm(enumerate(images)):
-                new_image = f'{new_folder}_{i}'
+                new_image = f'{new_folder}_{i}.png'
                 image_path = os.path.join(folders_path, split, new_folder, image)
                 new_image_path = os.path.join(folders_path, split, new_folder, new_image)
                 os.rename(image_path, new_image_path)
