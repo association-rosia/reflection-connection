@@ -1,10 +1,7 @@
 import os
-from glob import glob
 import numpy as np
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset
-from torch.utils.data import Subset
-from torchvision.datasets import ImageFolder
 from PIL import Image
 
 import src.data.transforms as dT
