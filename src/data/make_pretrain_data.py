@@ -61,7 +61,7 @@ def get_tiles_coords(values, counts, num_tiles=4, max_h=1259, max_w=300):
             x0, x1, y0, y1 = adjust_coordinates(x0, y0, h, w, max_h, max_w)
             tiles_coords.append((x0, x1, y0, y1))
 
-    tiles_coords = random.choices(tiles_coords, k=num_tiles)
+    tiles_coords = random.sample(tiles_coords, k=num_tiles)
 
     return tiles_coords
 
@@ -108,7 +108,7 @@ def reduce_num_tiles():
     pretrain_train_glob = os.path.join(pretrain_train_path, '**/*.png')
     pretrain_train_files = glob(pretrain_train_glob, recursive=True)
     to_remove_len = len(pretrain_train_files) - image_net_train_length
-    to_remove_files = random.choices(pretrain_train_files, k=to_remove_len)
+    to_remove_files = random.sample(pretrain_train_files, k=to_remove_len)
 
     for to_remove_file in tqdm(to_remove_files):
         os.remove(to_remove_file)
@@ -163,8 +163,8 @@ def count_images(config):
 if __name__ == "__main__":
     # check_data()
     config = utils.get_config()
-    init_folders(config)
-    extract_tiles_from_volumes(config)
+    # init_folders(config)
+    # extract_tiles_from_volumes(config)
     reduce_num_tiles()
     make_labels_txt()
     count_images(config)
