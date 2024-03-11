@@ -6,7 +6,6 @@ from glob import glob
 import cv2
 import numpy as np
 from PIL import Image
-from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
 import src.utils as utils
@@ -82,22 +81,6 @@ def extract_tiles_from_slice(slice, save_volume_path, values, counts, volume_nam
     return image_idx
 
 
-def split_tiles(save_volume_path, volume_name):
-    save_train_path = os.path.join(config['path']['data'], 'processed', 'pretrain', 'train')
-    save_val_path = os.path.join(config['path']['data'], 'processed', 'pretrain', 'val', volume_name)
-    os.makedirs(save_val_path, exist_ok=True)
-
-    tile_files = os.listdir(save_volume_path)
-    _, tile_files_val = train_test_split(tile_files, test_size=0.01, random_state=42)
-
-    for tile_file in tile_files_val:
-        tile_path = os.path.join(save_volume_path, tile_file)
-        new_tile_path = os.path.join(save_val_path, tile_file)
-        shutil.move(tile_path, new_tile_path)
-
-    shutil.move(save_volume_path, save_train_path)
-
-
 def extract_tiles_from_volumes(config):
     values, counts = get_values_counts(config)
     data_pretrain_path = os.path.join(config['path']['data'], 'raw', 'pretrain')
@@ -118,7 +101,24 @@ def extract_tiles_from_volumes(config):
             _ = extract_tiles_from_slice(slice, save_volume_path, values, counts, volume_name, image_idx)
 
 
-def make_labels_text():
+def reduce_num_tiles():
+    image_net_train_length = 1_281_167
+    pretrain_train_path = os.path.join(config['path']['data'], 'processed', 'pretrain', 'train')
+    pretrain_train_files = glob(pretrain_train_path, recursive=True)
+    to_remove_len = len(pretrain_train_files) - image_net_train_length
+    to_remove_files = random.choices(pretrain_train_files, k=to_remove_len)
+
+    for to_remove_file in tqdm(to_remove_files):
+        os.remove(to_remove_file)
+
+    folders = os.listdir(pretrain_train_path)
+    for folder in folders:
+        folder_path = os.path.join(pretrain_train_path, folder)
+        if not os.listdir(folder_path):
+            shutil.rmtree(folder_path)
+
+
+def make_labels_txt():
     config = utils.get_config()
     folders_train_path = os.path.join(config['path']['data'], 'processed', 'pretrain', 'train')
     folders_train = os.listdir(folders_train_path)
@@ -155,4 +155,5 @@ if __name__ == "__main__":
     config = utils.get_config()
     init_folders(config)
     extract_tiles_from_volumes(config)
-    make_labels_text()
+    reduce_num_tiles()
+    make_labels_txt()
