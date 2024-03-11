@@ -94,18 +94,19 @@ def extract_tiles_from_volumes(config):
         volume_name = volume_name.replace('.', '').replace('_', '')
         save_volume_path = os.path.join(save_pretrain_path, volume_name)
 
+        image_idx = 0
         for slice_idx in range(len(volume)):
-            image_idx = 0
             slice = volume[slice_idx, :, :].T
             image_idx = extract_tiles_from_slice(slice, save_volume_path, values, counts, volume_name, image_idx)
             slice = volume[:, slice_idx, :].T
-            _ = extract_tiles_from_slice(slice, save_volume_path, values, counts, volume_name, image_idx)
+            image_idx = extract_tiles_from_slice(slice, save_volume_path, values, counts, volume_name, image_idx)
 
 
 def reduce_num_tiles():
     image_net_train_length = 1_281_167
     pretrain_train_path = os.path.join(config['path']['data'], 'processed', 'pretrain', 'train')
-    pretrain_train_files = glob(pretrain_train_path, recursive=True)
+    pretrain_train_glob = os.path.join(pretrain_train_path, '**/*.png')
+    pretrain_train_files = glob(pretrain_train_glob, recursive=True)
     to_remove_len = len(pretrain_train_files) - image_net_train_length
     to_remove_files = random.choices(pretrain_train_files, k=to_remove_len)
 
@@ -154,15 +155,16 @@ def check_data():
 def count_images(config):
     pretrain_train_path = os.path.join(config['path']['data'], 'processed', 'pretrain', 'train')
     folders = os.listdir(pretrain_train_path)
-    images = glob(os.path.join(pretrain_train_path,  '**/*.png'), recursive=True)
+    pretrain_train_glob = os.path.join(pretrain_train_path, '**/*.png')
+    images = glob(pretrain_train_glob, recursive=True)
     print(f'Final number of folders {len(folders)} - Final number of images: {len(images)}')
 
 
 if __name__ == "__main__":
     # check_data()
     config = utils.get_config()
-    # init_folders(config)
-    # extract_tiles_from_volumes(config)
-    # reduce_num_tiles()
-    # make_labels_txt()
+    init_folders(config)
+    extract_tiles_from_volumes(config)
+    reduce_num_tiles()
+    make_labels_txt()
     count_images(config)
