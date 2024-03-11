@@ -1,0 +1,12 @@
+train:
+  batch_size_per_gpu: 64
+  dataset_path: ImageNet:split=TRAIN:root=/home/external-rosia/rosia/reflection-connection/data/processed/pretrain/train:extra=/home/external-rosia/rosia/reflection-connection/data/processed/pretrain/extra
+  centering: sinkhorn_knopp
+student:
+  arch: vit_large
+  patch_size: 16
+  pretrained_weights: ''
+  ffn_layer: mlp # or swiglufused
+optim:
+  epochs: 100
+  base_lr: 0.004  # learning rate for a batch size of 1024
