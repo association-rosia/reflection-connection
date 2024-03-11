@@ -151,10 +151,17 @@ def check_data():
             pbar.write(f'ERROR - {volume_path}')
 
 
+def count_images(config):
+    pretrain_train_path = os.path.join(config['path']['data'], 'processed', 'pretrain', 'train')
+    images = glob(pretrain_train_path, recursive=True)
+    print(f'Final number of images: {len(images)}')
+
+
 if __name__ == "__main__":
     # check_data()
     config = utils.get_config()
-    init_folders(config)
-    extract_tiles_from_volumes(config)
-    reduce_num_tiles()
-    make_labels_txt()
+    # init_folders(config)
+    # extract_tiles_from_volumes(config)
+    # reduce_num_tiles()
+    # make_labels_txt()
+    count_images(config)
