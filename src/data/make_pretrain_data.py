@@ -91,6 +91,7 @@ def extract_tiles_from_volumes(config):
         volume = np.load(volume_path)
 
         volume_name = volume_path.split('/')[-1].replace('.npy', '')
+        volume_name = volume_name.replace('.', '').replace('_', '')
         save_volume_path = os.path.join(save_pretrain_path, volume_name)
 
         for slice_idx in range(len(volume)):
