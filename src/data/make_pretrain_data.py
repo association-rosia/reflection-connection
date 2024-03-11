@@ -98,7 +98,7 @@ def split_tiles(save_volume_path, volume_name):
 def extract_tiles_from_volumes(config):
     values, counts = get_values_counts(config)
     data_pretrain_path = os.path.join(config['path']['data'], 'raw', 'pretrain')
-    save_pretrain_path = os.path.join(config['path']['data'], 'processed', 'pretrain')
+    save_pretrain_path = os.path.join(config['path']['data'], 'processed', 'pretrain', 'train')
     data_pretrain_glob = os.path.join(data_pretrain_path, '**/*.npy')
 
     for volume_path in tqdm(glob(data_pretrain_glob, recursive=True)):
@@ -113,7 +113,7 @@ def extract_tiles_from_volumes(config):
             slice = volume[:, slice_idx, :].T
             extract_tiles_from_slice(slice, save_volume_path, 1, slice_idx, values, counts)
 
-        split_tiles(save_volume_path, volume_name)
+        # split_tiles(save_volume_path, volume_name)
 
 
 def init_folders(config):
@@ -121,8 +121,8 @@ def init_folders(config):
     os.makedirs(pretrain_path, exist_ok=True)
     pretrain_train_path = os.path.join(config['path']['data'], 'processed', 'pretrain', 'train')
     os.makedirs(pretrain_train_path, exist_ok=True)
-    pretrain_val_path = os.path.join(config['path']['data'], 'processed', 'pretrain', 'val')
-    os.makedirs(pretrain_val_path, exist_ok=True)
+    # pretrain_val_path = os.path.join(config['path']['data'], 'processed', 'pretrain', 'val')
+    # os.makedirs(pretrain_val_path, exist_ok=True)
 
 
 if __name__ == "__main__":
