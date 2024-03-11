@@ -11,6 +11,16 @@ from tqdm import tqdm
 import src.utils as utils
 
 
+def main():
+    check_data()
+    config = utils.get_config()
+    init_folders(config)
+    extract_tiles_from_volumes(config)
+    reduce_num_tiles(config)
+    make_labels_txt()
+    count_images(config)
+
+
 def get_values_counts(config):
     shapes = []
     data_train_path = os.path.join(config['path']['data'], 'raw', 'train')
@@ -74,7 +84,7 @@ def extract_tiles_from_slice(slice, save_volume_path, values, counts, volume_nam
         tile = slice[x0:x1, y0:y1]
         tile = normalize_pretrain_slice(tile)
         image = Image.fromarray(tile).convert('L')
-        save_image_path = os.path.join(save_volume_path, f'{volume_name}-{image_idx}.png')
+        save_image_path = os.path.join(save_volume_path, f'{volume_name}_{image_idx}.png')
         image.save(save_image_path)
         image_idx += 1
 
@@ -102,8 +112,8 @@ def extract_tiles_from_volumes(config):
             image_idx = extract_tiles_from_slice(slice, save_volume_path, values, counts, volume_name, image_idx)
 
 
-def reduce_num_tiles():
-    image_net_train_length = 1_281_167
+def reduce_num_tiles(config):
+    image_net_train_length = 1_281_167  # number of images in ImageNet
     pretrain_train_path = os.path.join(config['path']['data'], 'processed', 'pretrain', 'train')
     pretrain_train_glob = os.path.join(pretrain_train_path, '**/*.png')
     pretrain_train_files = glob(pretrain_train_glob, recursive=True)
@@ -161,10 +171,4 @@ def count_images(config):
 
 
 if __name__ == "__main__":
-    # check_data()
-    config = utils.get_config()
-    # init_folders(config)
-    # extract_tiles_from_volumes(config)
-    reduce_num_tiles()
-    make_labels_txt()
-    count_images(config)
+    main()
