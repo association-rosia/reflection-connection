@@ -53,7 +53,7 @@ def adjust_coordinates(x0, y0, h, w, max_h, max_w):
     return x0, x1, y0, y1
 
 
-def get_tiles_coords(values, counts, num_tiles=15, max_h=1259, max_w=300):
+def get_tiles_coords(values, counts, num_tiles=4, max_h=1259, max_w=300):
     tiles_coords = []
 
     for x0 in range(0, max_h, 126):
@@ -67,16 +67,19 @@ def get_tiles_coords(values, counts, num_tiles=15, max_h=1259, max_w=300):
     return tiles_coords
 
 
-def extract_tiles_from_slice(slice, save_volume_path, dim, slice_idx, values, counts):
+def extract_tiles_from_slice(slice, save_volume_path, values, counts, volume_name, image_idx):
     tiles_coords = get_tiles_coords(values, counts)
     os.makedirs(save_volume_path, exist_ok=True)
 
-    for i, (x0, x1, y0, y1) in enumerate(tiles_coords):
+    for x0, x1, y0, y1 in tiles_coords:
         tile = slice[x0:x1, y0:y1]
         tile = normalize_pretrain_slice(tile)
         image = Image.fromarray(tile).convert('L')
-        save_image_path = os.path.join(save_volume_path, f'{dim}-{slice_idx}-{i}.png')
+        save_image_path = os.path.join(save_volume_path, f'{volume_name}-{image_idx}.png')
         image.save(save_image_path)
+        image_idx += 1
+
+    return image_idx
 
 
 def split_tiles(save_volume_path, volume_name):
@@ -108,12 +111,23 @@ def extract_tiles_from_volumes(config):
         save_volume_path = os.path.join(save_pretrain_path, volume_name)
 
         for slice_idx in range(len(volume)):
+            image_idx = 0
             slice = volume[slice_idx, :, :].T
-            extract_tiles_from_slice(slice, save_volume_path, 0, slice_idx, values, counts)
+            image_idx = extract_tiles_from_slice(slice, save_volume_path, values, counts, volume_name, image_idx)
             slice = volume[:, slice_idx, :].T
-            extract_tiles_from_slice(slice, save_volume_path, 1, slice_idx, values, counts)
+            _ = extract_tiles_from_slice(slice, save_volume_path, values, counts, volume_name, image_idx)
 
-        # split_tiles(save_volume_path, volume_name)
+
+def make_labels_text():
+    config = utils.get_config()
+    folders_train_path = os.path.join(config['path']['data'], 'processed', 'pretrain', 'train')
+    folders_train = os.listdir(folders_train_path)
+    save_path = os.path.join(config['path']['data'], 'processed', 'pretrain', 'labels.txt')
+
+    with open(save_path, 'w') as f:
+        for i, folder in enumerate(folders_train):
+            f.write(f'{folder}, seismic{i}')
+            f.write('\n')
 
 
 def init_folders(config):
@@ -121,11 +135,24 @@ def init_folders(config):
     os.makedirs(pretrain_path, exist_ok=True)
     pretrain_train_path = os.path.join(config['path']['data'], 'processed', 'pretrain', 'train')
     os.makedirs(pretrain_train_path, exist_ok=True)
-    # pretrain_val_path = os.path.join(config['path']['data'], 'processed', 'pretrain', 'val')
-    # os.makedirs(pretrain_val_path, exist_ok=True)
+
+
+def check_data():
+    config = utils.get_config()
+    data_pretrain_path = os.path.join(config['path']['data'], 'raw', 'pretrain')
+    data_pretrain_glob = os.path.join(data_pretrain_path, '**/*.npy')
+
+    pbar = tqdm(glob(data_pretrain_glob, recursive=True))
+    for volume_path in pbar:
+        try:
+            _ = np.load(volume_path)
+        except Exception:
+            pbar.write(f'ERROR - {volume_path}')
 
 
 if __name__ == "__main__":
+    # check_data()
     config = utils.get_config()
     init_folders(config)
     extract_tiles_from_volumes(config)
+    make_labels_text()
