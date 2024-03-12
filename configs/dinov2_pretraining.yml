@@ -1,12 +1,26 @@
+dino:
+  head_n_prototypes: 131072
+  head_bottleneck_dim: 384
+ibot:
+  separate_head: true
+  head_n_prototypes: 131072
 train:
-  batch_size_per_gpu: 4
+  batch_size_per_gpu: 16
   dataset_path: ImageNet:split=TRAIN:root=/home/external-rosia/rosia/reflection-connection/data/processed/pretrain/:extra=/home/external-rosia/rosia/reflection-connection/data/processed/pretrain/extra/
   centering: sinkhorn_knopp
 student:
   arch: vit_large
-  patch_size: 16
-  pretrained_weights: ''
-  ffn_layer: mlp # or swiglufused
+  patch_size: 14
+  drop_path_rate: 0.4
+  ffn_layer: swiglufused
+  block_chunks: 4
+teacher:
+  momentum_teacher: 0.994
 optim:
-  epochs: 100
-  base_lr: 0.000015625 # 0.004: learning rate for a batch size of 1024
+  epochs: 500
+  weight_decay_end: 0.2
+  base_lr: 2.0e-04  # learning rate for a batch size of 1024
+  warmup_epochs: 80
+  layerwise_decay: 1.0
+crops:
+  local_crops_size: 98
