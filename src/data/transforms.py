@@ -3,9 +3,9 @@ from typing import overload
 
 import numpy as np
 import torch
-import torchvision.transforms.functional as tvF
+import torchvision.transforms.v2.functional as tvF
 from PIL import Image
-from torchvision import transforms
+from torchvision.transforms import v2
 
 
 class ProcessorMode(Enum):
@@ -22,9 +22,18 @@ class RefConfProcessor:
         self.config = config
         self.wandb_config = wandb_config
         self.mode = mode
-        self.random_resized_crop = transforms.RandomResizedCrop(size=self.wandb_config['crop_size'],
-                                                                interpolation=tvF.InterpolationMode.BICUBIC)
+        self.random_transforms = self._get_random_transforms()
 
+    def _get_random_transforms(self):
+        return v2.Compose([
+            v2.RandomResizedCrop(
+                size=self.wandb_config['crop_size'],
+                interpolation=tvF.InterpolationMode.BICUBIC
+            ),
+            v2.RandomAutocontrast(),
+            v2.RandomHorizontalFlip()
+        ]) 
+    
     @overload
     def preprocess_image(self, images: Image.Image) -> torch.Tensor:
         ...
@@ -48,33 +57,25 @@ class RefConfProcessor:
             raise ValueError(f'Mode have an incorrect value')
 
     def _preprocess_training_image(self, image: torch.Tensor | np.ndarray | Image.Image) -> torch.Tensor:
-        image = self._maybe_to_tensor(image)
+        image = tvF.to_image(image)
+        image = tvF.to_dtype_image(image, torch.float32, scale=True)
         image = tvF.adjust_contrast(image, contrast_factor=self.wandb_config['contrast_factor'])
-        # https://github.com/facebookresearch/dinov2/blob/e1277af2ba9496fbadf7aec6eba56e8d882d1e35/dinov2/data/transforms.py#L58
-        # Add Random Horizontal flip
-        # Add Random Contrast 
-        image = self.random_resized_crop(image)
+        image = self.random_transforms(image)
         image = tvF.normalize(image, mean=self.config['data']['mean'], std=self.config['data']['std'])
 
         return image
 
     def _preprocess_eval_image(self, image: torch.Tensor | np.ndarray | Image.Image) -> torch.Tensor:
-        image = self._maybe_to_tensor(image)
+        image = tvF.to_image(image)
+        image = tvF.to_dtype_image(image, torch.float32, scale=True)
         image = tvF.adjust_contrast(image, contrast_factor=self.wandb_config['contrast_factor'])
-        # https://github.com/facebookresearch/dinov2/blob/e1277af2ba9496fbadf7aec6eba56e8d882d1e35/dinov2/data/transforms.py#L58
         image = tvF.resize(image, size=self.wandb_config['size'], interpolation=tvF.InterpolationMode.BICUBIC)
         if self.wandb_config.get('crop_size') is not None:
             image = tvF.center_crop(image, output_size=self.wandb_config['crop_size'])
         image = tvF.normalize(image, mean=self.config['data']['mean'], std=self.config['data']['std'])
 
         return image
-
-    @staticmethod
-    def _maybe_to_tensor(pic: torch.Tensor | np.ndarray | Image.Image) -> torch.Tensor:
-        if isinstance(pic, torch.Tensor):
-            return pic
-        return tvF.to_tensor(pic)
-
+    
     def __call__(self, image: Image.Image | list[Image.Image]) -> torch.Tensor:
         return self.preprocess_image(image)
 
@@ -87,10 +88,16 @@ def make_eval_processor(config, wandb_config):
     return RefConfProcessor(config, wandb_config, ProcessorMode.EVAL)
 
 
-if __name__ == '__main__':
+def _debug():
     from src import utils
 
     config = utils.get_config()
     wandb_config = utils.load_config('clip.yml')
-    make_training_processor(config, wandb_config)
-    make_eval_processor(config, wandb_config)
+    train_preprocessor = make_training_processor(config, wandb_config)
+    eval_preprocessor = make_eval_processor(config, wandb_config)
+    img = Image.open('data/raw/train/Boring/abwao.png').convert('RGB')
+    train_preprocessor.preprocess_image(img)
+    eval_preprocessor.preprocess_image(img)
+
+if __name__ == '__main__':
+    _debug()
