@@ -12,7 +12,7 @@ import src.utils as utils
 
 
 def main():
-    check_data()
+    # check_data()
     config = utils.get_config()
     init_folders(config)
     extract_tiles_from_volumes(config)
@@ -84,7 +84,7 @@ def extract_tiles_from_slice(slice, save_volume_path, values, counts, volume_nam
         tile = slice[x0:x1, y0:y1]
         tile = normalize_pretrain_slice(tile)
         image = Image.fromarray(tile).convert('L')
-        save_image_path = os.path.join(save_volume_path, f'{volume_name}_{image_idx}.png')
+        save_image_path = os.path.join(save_volume_path, f'{volume_name}_{image_idx}.JPEG')
         image.save(save_image_path)
         image_idx += 1
 
@@ -115,7 +115,7 @@ def extract_tiles_from_volumes(config):
 def reduce_num_tiles(config):
     image_net_train_length = 1_281_167  # number of images in ImageNet
     pretrain_train_path = os.path.join(config['path']['data'], 'processed', 'pretrain', 'train')
-    pretrain_train_glob = os.path.join(pretrain_train_path, '**/*.png')
+    pretrain_train_glob = os.path.join(pretrain_train_path, '**/*.JPEG')
     pretrain_train_files = glob(pretrain_train_glob, recursive=True)
     to_remove_len = len(pretrain_train_files) - image_net_train_length
     to_remove_files = random.sample(pretrain_train_files, k=to_remove_len)
@@ -165,7 +165,7 @@ def check_data():
 def count_images(config):
     pretrain_train_path = os.path.join(config['path']['data'], 'processed', 'pretrain', 'train')
     folders = os.listdir(pretrain_train_path)
-    pretrain_train_glob = os.path.join(pretrain_train_path, '**/*.png')
+    pretrain_train_glob = os.path.join(pretrain_train_path, '**/*.JPEG')
     images = glob(pretrain_train_glob, recursive=True)
     print(f'Final number of folders {len(folders)} - Final number of images: {len(images)}')
 

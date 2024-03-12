@@ -105,7 +105,7 @@ def _debug():
     kargs = {
         'config': config,
         'wandb_config': wandb_config,
-        'model': model,
+        'model': model
     }
 
     lightning = RefConLightning(**kargs)
