@@ -1,30 +1,20 @@
 import os
 from typing import overload
 from typing_extensions import Self
-from importlib import import_module
 from tqdm.autonotebook import tqdm
 from glob import glob
 
 import torch
-import numpy as np
 from PIL import Image
 import wandb.apis.public as wandb_api
 
 import src.data.transforms as dT
+import src.models.utils as mutils
 from src import utils
-
-
-def _import_module_lightning(model_id):
-    if 'clip' in model_id:
-        return import_module('src.models.clip.lightning')
-    elif 'dinov2' in model_id:
-        return import_module('src.models.dinov2.lightning')
-    elif 'ViT' in model_id:
-        return import_module('src.models.vit.lightning')
-    
+ 
 
 def load_lightning_model(config, wandb_run, map_location):
-    module_lightning = _import_module_lightning(wandb_run.config['model_id'])
+    module_lightning = mutils.get_lightning_library(wandb_run.config)
     model = module_lightning.get_model(wandb_run.config)
     
     kargs = {
@@ -131,9 +121,12 @@ class EmbeddingsBuilder:
     
     @staticmethod
     def _make_list_paths(folder_path):
-        glob_path = os.path.join(folder_path, '**', '*.png')
+        glob_path_png = os.path.join(folder_path, '**', '*.png')
+        list_png = glob(glob_path_png, recursive=True)
+        glob_path_jpeg = os.path.join(folder_path, '**', '*.JPEG')
+        list_jpeg = glob(glob_path_jpeg, recursive=True)
         
-        return glob(glob_path, recursive=True)
+        return list_png + list_jpeg
     
     @staticmethod
     def _load_image(image_path):
@@ -173,12 +166,13 @@ def _debug():
     config = utils.get_config()
     wandb_run = utils.get_run('96t0rkbl')
     model = InferenceModel.load_from_wandb_run(config, wandb_run, 'cpu')
-    embeddings_builder = EmbeddingsBuilder(device=0, return_names=True)
+    embeddings_builder = EmbeddingsBuilder(device=1, return_names=True)
     folder_path = os.path.join(config['path']['data'], 'raw', 'train')
     embeddings_builder.build_embeddings(model=model, folder_path=folder_path)
 
     del model, embeddings_builder
     torch.cuda.empty_cache()
+
 
 if __name__ == '__main__':
     _debug()

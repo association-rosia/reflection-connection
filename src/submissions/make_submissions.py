@@ -11,7 +11,7 @@ def main():
     config = utils.get_config()
     wandb_run = utils.get_run('96t0rkbl')
     model = InferenceModel.load_from_wandb_run(config, wandb_run, 'cpu')
-    embeddings_builder = EmbeddingsBuilder(device=0, return_names=True)
+    embeddings_builder = EmbeddingsBuilder(device=1, return_names=True)
     query_folder_path = os.path.join(config['path']['data'], 'raw', 'test', 'query')
     corpus_folder_path = os.path.join(config['path']['data'], 'raw', 'test', 'image_corpus')
     corpus_embeddings, corpus_names = embeddings_builder.build_embeddings(model=model, folder_path=corpus_folder_path, return_names=True)
@@ -24,7 +24,7 @@ def main():
     confidence_scores = dist_to_conf(distances)
     
     # Create submission file
-    result_builder = ResultBuilder(config)
+    result_builder = ResultBuilder(config['path']['submissions'], k=3)
     result_builder(
         query_names,
         matched_labels,
@@ -50,10 +50,10 @@ def dist_to_conf(distances: np.ndarray):
 
 
 class ResultBuilder:
-    def __init__(self, config):
+    def __init__(self, path, k=3):
         self.results = dict()
-        path = config['path']['submissions']
         self.path = utils.get_notebooks_path(path)
+        self.k = k
         
     def build(self, 
               query_image_labels: np.ndarray, 
@@ -67,11 +67,11 @@ class ResultBuilder:
         if len(query_image_labels.shape) != 1:
             raise ValueError(f'Expected query_image_labels to be 1-dimensional array, got {query_image_labels.shape} instead')
         
-        if matched_labels.shape != (query_image_labels.shape[0],3):
-            raise ValueError(f'Expected matched_labels to have shape {(query_image_labels.shape[0], 3)}, got {matched_labels.shape} instead')
+        if matched_labels.shape != (query_image_labels.shape[0], self.k):
+            raise ValueError(f'Expected matched_labels to have shape {(query_image_labels.shape[0], self.k)}, got {matched_labels.shape} instead')
         
-        if confidence_scores.shape != (query_image_labels.shape[0],3):
-            raise ValueError(f'Expected confidence_scores to have shape {(query_image_labels.shape[0], 3)}, got {confidence_scores.shape} instead')
+        if confidence_scores.shape != (query_image_labels.shape[0], self.k):
+            raise ValueError(f'Expected confidence_scores to have shape {(query_image_labels.shape[0], self.k)}, got {confidence_scores.shape} instead')
             
         for i, x in enumerate(query_image_labels):
             labels = matched_labels[i]

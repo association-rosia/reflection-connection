@@ -1,4 +1,5 @@
 import os
+import json
 import numpy as np
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset
@@ -117,6 +118,17 @@ def get_class_path(dir_path):
     return list_class_name, list_img_path
 
 
+def get_iterative_class_path(iterative_file):
+    list_class_name = []
+    list_img_path = []
+    
+    if iterative_file is not None:
+        with open(iterative_file, 'r') as f:
+            iterative_data = json.load(f)
+    
+    return list_class_name, list_img_path
+
+
 def get_train_val_split(wandb_config, list_class_name, list_img_path):
     train_class_name, val_class_name, train_path_img, val_path_img = train_test_split(
         list_class_name, list_img_path,
@@ -135,20 +147,39 @@ def get_image_folder(config):
     return path
 
 
-def make_train_triplet_dataset(config, wandb_config):
+def get_iterative_file(config, wandb_config):
+    if wandb_config['iterative_data'] is None:
+        return None
+
+    path = os.path.join(config['path']['data'], 'processed', 'train', wandb_config['iterative_data'])
+    path = utils.get_notebooks_path(path)
+
+    return path
+
+
+def get_curated_class_path(config, wandb_config):
     image_folder = get_image_folder(config)
     list_class_name, list_img_path = get_class_path(image_folder)
+    iterative_file = get_iterative_file(config, wandb_config)
+    list_iterative_class_name, list_iterative_img_path = get_iterative_class_path(iterative_file)
+    curated_class_name = list_class_name + list_iterative_class_name
+    curated_img_path = list_img_path + list_iterative_img_path
+    
+    return curated_class_name, curated_img_path
+
+
+def make_train_triplet_dataset(config, wandb_config):
+    curated_class_name, curated_img_path = get_curated_class_path(config, wandb_config)
     processor = dT.make_training_processor(config, wandb_config)
-    train_class_name, _, train_path_img, _ = get_train_val_split(wandb_config, list_class_name, list_img_path)
+    train_class_name, _, train_path_img, _ = get_train_val_split(wandb_config, curated_class_name, curated_img_path)
 
     return RefConTripletDataset(wandb_config, train_class_name, train_path_img, processor, True)
 
 
 def make_val_triplet_dataset(config, wandb_config):
-    image_folder = get_image_folder(config)
-    list_class_name, list_img_path = get_class_path(image_folder)
+    curated_class_name, curated_img_path = get_curated_class_path(config, wandb_config)
     processor = dT.make_training_processor(config, wandb_config)
-    _, val_class_name, _, val_path_img = get_train_val_split(wandb_config, list_class_name, list_img_path)
+    _, val_class_name, _, val_path_img = get_train_val_split(wandb_config, curated_class_name, curated_img_path)
 
     return RefConTripletDataset(wandb_config, val_class_name, val_path_img, processor, False)
 
