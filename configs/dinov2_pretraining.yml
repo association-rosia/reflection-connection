@@ -19,7 +19,7 @@ teacher:
 optim:
   epochs: 500
   weight_decay_end: 0.2
-  base_lr: 2.0e-04  # learning rate for a batch size of 1024
+  base_lr: 2.0e-04  # for a batch size of 1024 / 0.000003125 for a batch size of 16
   warmup_epochs: 80
   layerwise_decay: 1.0
 crops:
