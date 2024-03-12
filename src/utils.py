@@ -24,7 +24,7 @@ def get_notebooks_path(path: str) -> str:
 
 
 def load_config(yml_file: str) -> dict:
-    root = os.path.join('config', yml_file)
+    root = os.path.join('configs', yml_file)
     path = get_notebooks_path(root)
 
     with open(path, 'r') as f:

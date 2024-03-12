@@ -6,10 +6,19 @@ from glob import glob
 import cv2
 import numpy as np
 from PIL import Image
-from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
 import src.utils as utils
+
+
+def main():
+    # check_data()
+    config = utils.get_config()
+    init_folders(config)
+    extract_tiles_from_volumes(config)
+    reduce_num_tiles(config)
+    make_labels_txt()
+    count_images(config)
 
 
 def get_values_counts(config):
@@ -53,7 +62,7 @@ def adjust_coordinates(x0, y0, h, w, max_h, max_w):
     return x0, x1, y0, y1
 
 
-def get_tiles_coords(values, counts, num_tiles=15, max_h=1259, max_w=300):
+def get_tiles_coords(values, counts, num_tiles=4, max_h=1259, max_w=300):
     tiles_coords = []
 
     for x0 in range(0, max_h, 126):
@@ -62,58 +71,75 @@ def get_tiles_coords(values, counts, num_tiles=15, max_h=1259, max_w=300):
             x0, x1, y0, y1 = adjust_coordinates(x0, y0, h, w, max_h, max_w)
             tiles_coords.append((x0, x1, y0, y1))
 
-    tiles_coords = random.choices(tiles_coords, k=num_tiles)
+    tiles_coords = random.sample(tiles_coords, k=num_tiles)
 
     return tiles_coords
 
 
-def extract_tiles_from_slice(slice, save_volume_path, dim, slice_idx, values, counts):
+def extract_tiles_from_slice(slice, save_volume_path, values, counts, volume_name, image_idx):
     tiles_coords = get_tiles_coords(values, counts)
     os.makedirs(save_volume_path, exist_ok=True)
 
-    for i, (x0, x1, y0, y1) in enumerate(tiles_coords):
+    for x0, x1, y0, y1 in tiles_coords:
         tile = slice[x0:x1, y0:y1]
         tile = normalize_pretrain_slice(tile)
         image = Image.fromarray(tile).convert('L')
-        save_image_path = os.path.join(save_volume_path, f'{dim}-{slice_idx}-{i}.png')
+        save_image_path = os.path.join(save_volume_path, f'{volume_name}_{image_idx}.JPEG')
         image.save(save_image_path)
+        image_idx += 1
 
-
-def split_tiles(save_volume_path, volume_name):
-    save_train_path = os.path.join(config['path']['data'], 'processed', 'pretrain', 'train')
-    save_val_path = os.path.join(config['path']['data'], 'processed', 'pretrain', 'val', volume_name)
-    os.makedirs(save_val_path, exist_ok=True)
-
-    tile_files = os.listdir(save_volume_path)
-    _, tile_files_val = train_test_split(tile_files, test_size=0.01, random_state=42)
-
-    for tile_file in tile_files_val:
-        tile_path = os.path.join(save_volume_path, tile_file)
-        new_tile_path = os.path.join(save_val_path, tile_file)
-        shutil.move(tile_path, new_tile_path)
-
-    shutil.move(save_volume_path, save_train_path)
+    return image_idx
 
 
 def extract_tiles_from_volumes(config):
     values, counts = get_values_counts(config)
     data_pretrain_path = os.path.join(config['path']['data'], 'raw', 'pretrain')
-    save_pretrain_path = os.path.join(config['path']['data'], 'processed', 'pretrain')
+    save_pretrain_path = os.path.join(config['path']['data'], 'processed', 'pretrain', 'train')
     data_pretrain_glob = os.path.join(data_pretrain_path, '**/*.npy')
 
     for volume_path in tqdm(glob(data_pretrain_glob, recursive=True)):
         volume = np.load(volume_path)
 
         volume_name = volume_path.split('/')[-1].replace('.npy', '')
+        volume_name = volume_name.replace('.', '').replace('_', '')
         save_volume_path = os.path.join(save_pretrain_path, volume_name)
 
+        image_idx = 0
         for slice_idx in range(len(volume)):
             slice = volume[slice_idx, :, :].T
-            extract_tiles_from_slice(slice, save_volume_path, 0, slice_idx, values, counts)
+            image_idx = extract_tiles_from_slice(slice, save_volume_path, values, counts, volume_name, image_idx)
             slice = volume[:, slice_idx, :].T
-            extract_tiles_from_slice(slice, save_volume_path, 1, slice_idx, values, counts)
+            image_idx = extract_tiles_from_slice(slice, save_volume_path, values, counts, volume_name, image_idx)
 
-        split_tiles(save_volume_path, volume_name)
+
+def reduce_num_tiles(config):
+    image_net_train_length = 1_281_167  # number of images in ImageNet
+    pretrain_train_path = os.path.join(config['path']['data'], 'processed', 'pretrain', 'train')
+    pretrain_train_glob = os.path.join(pretrain_train_path, '**/*.JPEG')
+    pretrain_train_files = glob(pretrain_train_glob, recursive=True)
+    to_remove_len = len(pretrain_train_files) - image_net_train_length
+    to_remove_files = random.sample(pretrain_train_files, k=to_remove_len)
+
+    for to_remove_file in tqdm(to_remove_files):
+        os.remove(to_remove_file)
+
+    folders = os.listdir(pretrain_train_path)
+    for folder in folders:
+        folder_path = os.path.join(pretrain_train_path, folder)
+        if not os.listdir(folder_path):
+            shutil.rmtree(folder_path)
+
+
+def make_labels_txt():
+    config = utils.get_config()
+    folders_train_path = os.path.join(config['path']['data'], 'processed', 'pretrain', 'train')
+    folders_train = os.listdir(folders_train_path)
+    save_path = os.path.join(config['path']['data'], 'processed', 'pretrain', 'labels.txt')
+
+    with open(save_path, 'w') as f:
+        for i, folder in enumerate(folders_train):
+            f.write(f'{folder}, seismic{i}')
+            f.write('\n')
 
 
 def init_folders(config):
@@ -121,11 +147,28 @@ def init_folders(config):
     os.makedirs(pretrain_path, exist_ok=True)
     pretrain_train_path = os.path.join(config['path']['data'], 'processed', 'pretrain', 'train')
     os.makedirs(pretrain_train_path, exist_ok=True)
-    pretrain_val_path = os.path.join(config['path']['data'], 'processed', 'pretrain', 'val')
-    os.makedirs(pretrain_val_path, exist_ok=True)
+
+
+def check_data():
+    config = utils.get_config()
+    data_pretrain_path = os.path.join(config['path']['data'], 'raw', 'pretrain')
+    data_pretrain_glob = os.path.join(data_pretrain_path, '**/*.npy')
+
+    pbar = tqdm(glob(data_pretrain_glob, recursive=True))
+    for volume_path in pbar:
+        try:
+            _ = np.load(volume_path)
+        except Exception:
+            pbar.write(f'ERROR - {volume_path}')
+
+
+def count_images(config):
+    pretrain_train_path = os.path.join(config['path']['data'], 'processed', 'pretrain', 'train')
+    folders = os.listdir(pretrain_train_path)
+    pretrain_train_glob = os.path.join(pretrain_train_path, '**/*.JPEG')
+    images = glob(pretrain_train_glob, recursive=True)
+    print(f'Final number of folders {len(folders)} - Final number of images: {len(images)}')
 
 
 if __name__ == "__main__":
-    config = utils.get_config()
-    init_folders(config)
-    extract_tiles_from_volumes(config)
+    main()
