@@ -9,9 +9,9 @@ from src.models.inference import InferenceModel, EmbeddingsBuilder
 
 def main():
     config = utils.get_config()
-    wandb_run = utils.get_run('96t0rkbl')
+    wandb_run = utils.get_run('tqwb6tru')
     model = InferenceModel.load_from_wandb_run(config, wandb_run, 'cpu')
-    embeddings_builder = EmbeddingsBuilder(device=0, return_names=True)
+    embeddings_builder = EmbeddingsBuilder(device=1, return_names=True)
     query_folder_path = os.path.join(config['path']['data'], 'raw', 'test', 'query')
     corpus_folder_path = os.path.join(config['path']['data'], 'raw', 'test', 'image_corpus')
     corpus_embeddings, corpus_names = embeddings_builder.build_embeddings(model=model, folder_path=corpus_folder_path, return_names=True)

@@ -4,13 +4,13 @@ random_state: 42
 max_epochs: 1000
 criterion: 'TMWDL-Cosine'
 
-contrast_factor: 25
+contrast_factor: 15
 size: 256
 crop_size: 224
 exclude_anchor: ['Boring']
 
 model_id: 'ViT_L_16_SEISMIC31K_SGD'
 
-batch_size: 16
+batch_size: 32
 
-lr: 0.00001
+lr: 0.000005
