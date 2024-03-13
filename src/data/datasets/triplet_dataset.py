@@ -118,13 +118,11 @@ def get_class_path(dir_path):
     return list_class_name, list_img_path
 
 
-def get_iterative_class_path(iterative_file):
+def get_iterative_class_path(wandb_config, iterative_file):
     list_class_name = []
     list_img_path = []
     
-    if iterative_file is not None:
-        with open(iterative_file, 'r') as f:
-            iterative_data = json.load(f)
+    curated_data = utils.load_curated_dataset()
     
     return list_class_name, list_img_path
 
@@ -147,21 +145,13 @@ def get_image_folder(config):
     return path
 
 
-def get_iterative_file(config, wandb_config):
-    if wandb_config['iterative_data'] is None:
-        return None
-
-    path = os.path.join(config['path']['data'], 'processed', 'train', wandb_config['iterative_data'])
-    path = utils.get_notebooks_path(path)
-
-    return path
-
-
 def get_curated_class_path(config, wandb_config):
+    # TODO: Faire en sorte que si le iterative file n'existe pas 
+    # alors ça va chercher le train d'origine sinon ça se réfère à l'iterative file
     image_folder = get_image_folder(config)
     list_class_name, list_img_path = get_class_path(image_folder)
     iterative_file = get_iterative_file(config, wandb_config)
-    list_iterative_class_name, list_iterative_img_path = get_iterative_class_path(iterative_file)
+    list_iterative_class_name, list_iterative_img_path = get_iterative_class_path(wandb_config, iterative_file)
     curated_class_name = list_class_name + list_iterative_class_name
     curated_img_path = list_img_path + list_iterative_img_path
     

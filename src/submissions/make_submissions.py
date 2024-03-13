@@ -9,15 +9,15 @@ from src.models.inference import InferenceModel, EmbeddingsBuilder
 
 def main():
     config = utils.get_config()
-    wandb_run = utils.get_run('96t0rkbl')
+    wandb_run = utils.get_run('tqwb6tru')
     model = InferenceModel.load_from_wandb_run(config, wandb_run, 'cpu')
-    embeddings_builder = EmbeddingsBuilder(device=1, return_names=True)
+    embeddings_builder = EmbeddingsBuilder(device=0, return_names=True)
     query_folder_path = os.path.join(config['path']['data'], 'raw', 'test', 'query')
     corpus_folder_path = os.path.join(config['path']['data'], 'raw', 'test', 'image_corpus')
     corpus_embeddings, corpus_names = embeddings_builder.build_embeddings(model=model, folder_path=corpus_folder_path, return_names=True)
     query_embeddings, query_names = embeddings_builder.build_embeddings(model=model, folder_path=query_folder_path, return_names=True)
     
-    metric = get_metric(wandb_run.config)
+    metric = utils.get_metric(wandb_run.config)
     retriever = FaissRetriever(embeddings_size=corpus_embeddings.shape[1], metric=metric)
     retriever.add_to_index(corpus_embeddings, labels=corpus_names)
     distances, matched_labels = retriever.query(query_embeddings, k=3)
@@ -33,13 +33,6 @@ def main():
     )
 
 
-def get_metric(wandb_config):
-    if wandb_config['criterion'] == 'TMWDL-Euclidean':
-        return 'l2'
-    elif wandb_config['criterion'] == 'TMWDL-Cosine':
-        return 'cosine'
-
-
 def dist_to_conf(distances: np.ndarray):
     max_dist = distances.max(axis=1).reshape(-1, 1)
     min_dist = distances.min(axis=1).reshape(-1, 1)
@@ -50,18 +43,19 @@ def dist_to_conf(distances: np.ndarray):
 
 
 class ResultBuilder:
-    def __init__(self, path, k=3):
+    def __init__(self, path, k: int = 3, score_mode: str = 'confidence'):
         self.results = dict()
         self.path = utils.get_notebooks_path(path)
         self.k = k
+        self.score_mode = score_mode
         
     def build(self, 
               query_image_labels: np.ndarray, 
               matched_labels: np.ndarray,   
-              confidence_scores: np.ndarray):
+              scores: np.ndarray):
         query_image_labels = np.asarray(query_image_labels)
         matched_labels = np.asarray(matched_labels)
-        confidence_scores = np.asarray(confidence_scores)
+        scores = np.asarray(scores)
         
         # validate shapes of inputs
         if len(query_image_labels.shape) != 1:
@@ -70,14 +64,14 @@ class ResultBuilder:
         if matched_labels.shape != (query_image_labels.shape[0], self.k):
             raise ValueError(f'Expected matched_labels to have shape {(query_image_labels.shape[0], self.k)}, got {matched_labels.shape} instead')
         
-        if confidence_scores.shape != (query_image_labels.shape[0], self.k):
-            raise ValueError(f'Expected confidence_scores to have shape {(query_image_labels.shape[0], self.k)}, got {confidence_scores.shape} instead')
+        if scores.shape != (query_image_labels.shape[0], self.k):
+            raise ValueError(f'Expected {self.score_mode}_scores to have shape {(query_image_labels.shape[0], self.k)}, got {scores.shape} instead')
             
         for i, x in enumerate(query_image_labels):
             labels = matched_labels[i]
-            confidence = confidence_scores[i]
+            confidence = scores[i]
     
-            result_x = [{'label': labels[j], 'confidence': float(confidence[j])} for j in range(0,3)]
+            result_x = [{'label': labels[j], self.score_mode: float(confidence[j])} for j in range(0,3)]
     
             self.results.update({x: result_x})
         
@@ -92,10 +86,10 @@ class ResultBuilder:
     def __call__(self,
               query_image_labels, 
               matched_labels,   
-              confidence_scores,
+              scores,
               json_name: str = 'results') -> None:
         
-        self.build(query_image_labels, matched_labels, confidence_scores)
+        self.build(query_image_labels, matched_labels, scores)
         self.to_json(json_name)
 
 

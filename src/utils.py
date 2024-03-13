@@ -4,6 +4,7 @@ import torch
 import wandb
 import wandb.apis.public as wandb_api
 import yaml
+import json
 
 
 def get_device() -> str:
@@ -76,3 +77,20 @@ class RunDemo:
         self.config = load_config(config_file)
         self.name = name
         self.id = id
+
+
+def load_curated_dataset(wandb_config):
+    if wandb_config['iterative_data'] is None:
+        return None
+    config = get_config()
+    path = os.path.join(config['path']['data'], 'processed', 'train', wandb_config['iterative_data'])
+    path = get_notebooks_path(path)
+    with open(path, 'r') as f:
+        return json.load(f)
+
+
+def get_metric(wandb_config):
+    if wandb_config['criterion'] == 'TMWDL-Euclidean':
+        return 'l2'
+    elif wandb_config['criterion'] == 'TMWDL-Cosine':
+        return 'cosine'
