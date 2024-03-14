@@ -17,43 +17,60 @@ class RefConLightning(pl.LightningModule):
         self.student_vit = ViTModel.from_pretrained(self.wandb_config['model_id'])
         self.teacher_vit = ViTModel.from_pretrained(self.wandb_config['model_id'])
 
-        self.student_dino_head = RefConHead(768, self.wandb_config['num_prototypes'])
-        self.teacher_dino_head = RefConHead(768, self.wandb_config['num_prototypes'])
-        self.dino_loss = DINOLoss()
+        self.student_head = RefConHead(768, self.wandb_config['num_prototypes'])
+        self.teacher_head = RefConHead(768, self.wandb_config['num_prototypes'])
 
-        self.student_ibot_head = RefConHead(768, self.wandb_config['num_prototypes'])
-        self.teacher_ibot_head = RefConHead(768, self.wandb_config['num_prototypes'])
+        self.dino_loss = DINOLoss()
 
         self.freeze_teacher_params()
 
-    # def forward(self, pixel_values):
-    #     student_outputs = self.student_vit(pixel_values=pixel_values)
-    #     student_outputs = self.student_head(student_outputs.last_hidden_state[:, 0])
-    #
-    #     return student_outputs
+    def dino_forward(self, batch):
+        student_outputs = self.student_vit(pixel_values=batch['dino_student_inputs'])
+        teacher_outputs = self.teacher_vit(pixel_values=batch['dino_teacher_inputs'])
 
-    def dino_forward(self, student_outputs, teacher_outputs):
-        dino_student_logits = self.student_dino_head(student_outputs.last_hidden_state[:, 0])
+        dino_student_logits = self.student_head(student_outputs.last_hidden_state[:, 0])
         dino_student_ps = torch.softmax(dino_student_logits, dim=-1)
 
         with torch.no_grad():
-            dino_teacher_logits = self.teacher_dino_head(teacher_outputs.last_hidden_state[:, 0])
+            dino_teacher_logits = self.teacher_head(teacher_outputs.last_hidden_state[:, 0])
             dino_teacher_ps = self.sinkhorn_knopp(dino_teacher_logits)
 
         return dino_student_ps, dino_teacher_ps  # DINO prototype scores
 
+    def ibot_forward(self, batch):
+        bool_masked_pos = batch['ibot_bool_masked_pos']
+        student_outputs = self.student_vit(pixel_values=batch['ibot_inputs'], bool_masked_pos=bool_masked_pos)
+        teacher_outputs = self.teacher_vit(pixel_values=batch['ibot_inputs'])
+
+        print(student_outputs.last_hidden_state.shape)
+        ibot_student_logits = self.student_head(student_outputs.last_hidden_state[:, 0])
+        ibot_student_ps = torch.softmax(ibot_student_logits, dim=-1)
+
+        with torch.no_grad():
+            dino_teacher_logits = self.teacher_head(teacher_outputs.last_hidden_state[:, 0])
+            dino_teacher_ps = self.sinkhorn_knopp(dino_teacher_logits)
+
+        return ibot_student_ps, dino_teacher_ps  # iBOT prototype scores
+
     def training_step(self, batch, batch_idx):
         loss = 0
 
-        student_outputs = self.student_vit(pixel_values=batch['dino_student_inputs'])
-        teacher_outputs = self.teacher_vit(pixel_values=batch['dino_teacher_inputs'])
+        dino_student_ps, dino_teacher_ps = self.dino_forward(batch)
+        dino_loss = self.dino_loss(dino_student_ps, dino_teacher_ps)
+        loss += dino_loss
 
-        dino_student_ps, dino_teacher_ps = self.dino_forward(student_outputs, teacher_outputs)
-        loss += self.dino_loss(dino_student_ps, dino_teacher_ps)
+        ibot_student_ps, ibot_teacher_ps = self.ibot_forward(batch)
+        ibot_loss = self.ibot_loss(ibot_student_ps, ibot_teacher_ps)
+        loss += ibot_loss
 
         self.update_teacher()
 
-        self.log('train/loss', loss)
+        self.log_dict({
+            'train/dino_loss': dino_loss,
+            'train/ibot_loss': ibot_loss,
+            # 'train/koleo_loss': koleo_loss,
+            'train/loss': loss
+        })
 
         return loss
 
@@ -65,10 +82,7 @@ class RefConLightning(pl.LightningModule):
         for param in self.teacher_vit.parameters():
             param.requires_grad = False
 
-        for param in self.student_dino_head.parameters():
-            param.requires_grad = False
-
-        for param in self.teacher_ibot_head.parameters():
+        for param in self.student_head.parameters():
             param.requires_grad = False
 
     @torch.no_grad()
@@ -90,12 +104,11 @@ class RefConLightning(pl.LightningModule):
         return Q.t()
 
     @torch.no_grad()
-    def update_teacher(self, teacher_momentum=0.992):
+    def update_teacher(self, teacher_momentum=0.994):
         for teacher_param, student_param in zip(self.teacher_vit.parameters(), self.student_vit.parameters()):
             teacher_param.data = teacher_momentum * teacher_param.data + (1 - teacher_momentum) * student_param.data
 
-        for teacher_param, student_param in zip(self.teacher_dino_head.parameters(),
-                                                self.student_dino_head.parameters()):
+        for teacher_param, student_param in zip(self.teacher_head.parameters(), self.student_head.parameters()):
             teacher_param.data = teacher_momentum * teacher_param.data + (1 - teacher_momentum) * student_param.data
 
     def train_dataloader(self):
