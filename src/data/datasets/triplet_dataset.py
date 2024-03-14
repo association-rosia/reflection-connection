@@ -103,26 +103,11 @@ class RefConTripletDataset(Dataset):
         return triplets
 
 
-def get_class_path(dir_path):
-    list_class_name = []
-    list_img_path = []
-    for class_name in os.listdir(dir_path):
-        class_path = os.path.join(dir_path, class_name)
-        if os.path.isdir(class_path):
-            for img_name in os.listdir(class_path):
-                if img_name.endswith('.png'):
-                    img_path = os.path.join(class_path, img_name)
-                    list_class_name.append(class_name)
-                    list_img_path.append(img_path)
-    
-    return list_class_name, list_img_path
-
-
 def get_iterative_class_path(wandb_config, iterative_file):
     list_class_name = []
     list_img_path = []
     
-    curated_data = utils.load_curated_dataset()
+    curated_data = utils.load_augmented_dataset()
     
     return list_class_name, list_img_path
 
@@ -146,16 +131,15 @@ def get_image_folder(config):
 
 
 def get_curated_class_path(config, wandb_config):
-    # TODO: Faire en sorte que si le iterative file n'existe pas 
-    # alors ça va chercher le train d'origine sinon ça se réfère à l'iterative file
     image_folder = get_image_folder(config)
-    list_class_name, list_img_path = get_class_path(image_folder)
-    iterative_file = get_iterative_file(config, wandb_config)
-    list_iterative_class_name, list_iterative_img_path = get_iterative_class_path(wandb_config, iterative_file)
-    curated_class_name = list_class_name + list_iterative_class_name
-    curated_img_path = list_img_path + list_iterative_img_path
+    image_paths, labels = utils.get_paths_labels(image_folder)
+    augmented_dataset = utils.load_augmented_dataset(config, wandb_config)
+    augmented_image_paths = [image_dict['image_path'] for image_dict in augmented_dataset]
+    augmented_labels = [image_dict['label'] for image_dict in augmented_dataset]
+    curated_image_paths = image_paths + augmented_image_paths
+    curated_labels = labels + augmented_labels
     
-    return curated_class_name, curated_img_path
+    return curated_image_paths, curated_labels
 
 
 def make_train_triplet_dataset(config, wandb_config):

@@ -71,7 +71,7 @@ class ResultBuilder:
             labels = matched_labels[i]
             confidence = scores[i]
     
-            result_x = [{'label': labels[j], self.score_mode: float(confidence[j])} for j in range(0,3)]
+            result_x = [{'label': labels[j], self.score_mode: float(confidence[j])} for j in range(0, self.k)]
     
             self.results.update({x: result_x})
         

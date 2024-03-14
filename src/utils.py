@@ -79,9 +79,9 @@ class RunDemo:
         self.id = id
 
 
-def load_curated_dataset(wandb_config):
+def load_augmented_dataset(wandb_config):
     if wandb_config['iterative_data'] is None:
-        return None
+        return []
     config = get_config()
     path = os.path.join(config['path']['data'], 'processed', 'train', wandb_config['iterative_data'])
     path = get_notebooks_path(path)
@@ -94,3 +94,18 @@ def get_metric(wandb_config):
         return 'l2'
     elif wandb_config['criterion'] == 'TMWDL-Cosine':
         return 'cosine'
+
+
+def get_paths_labels(folder_path):
+    labels = []
+    paths = []
+    for class_name in os.listdir(folder_path):
+        class_path = os.path.join(folder_path, class_name)
+        if os.path.isdir(class_path):
+            for img_name in os.listdir(class_path):
+                if img_name.endswith('.png'):
+                    img_path = os.path.join(class_path, img_name)
+                    labels.append(class_name)
+                    paths.append(img_path)
+    
+    return labels, paths

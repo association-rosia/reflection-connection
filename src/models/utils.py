@@ -36,7 +36,7 @@ def get_lightning(config, wandb_config, checkpoint=None):
     return lightning
 
 
-def get_trainer(config):
+def get_trainer(config, devices):
     os.makedirs(config['path']['models'], exist_ok=True)
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
         save_top_k=1,
@@ -60,14 +60,14 @@ def get_trainer(config):
             max_epochs=3,
             logger=pl.loggers.WandbLogger(),
             callbacks=[checkpoint_callback],
-            devices=1,
+            devices=devices,
             precision='16-mixed',
             limit_train_batches=5,
             limit_val_batches=5
         )
     else:
         trainer = pl.Trainer(
-            devices=1,
+            devices=devices,
             max_epochs=wandb.config.max_epochs,
             logger=pl.loggers.WandbLogger(),
             callbacks=[checkpoint_callback, early_stopping_callback],
