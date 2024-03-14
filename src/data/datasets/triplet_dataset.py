@@ -108,14 +108,14 @@ class RefConTripletDataset(Dataset):
         positive_img = self._load_image(positive_img_path)
         negative_img = self._load_image(negative_img_path)
 
-        plt.imshow(anchor_img.permute(1, 2, 0))
-        plt.show()
-
-        plt.imshow(positive_img.permute(1, 2, 0))
-        plt.show()
-
-        plt.imshow(negative_img.permute(1, 2, 0))
-        plt.show()
+        # plt.imshow(anchor_img.permute(1, 2, 0))
+        # plt.show()
+        #
+        # plt.imshow(positive_img.permute(1, 2, 0))
+        # plt.show()
+        #
+        # plt.imshow(negative_img.permute(1, 2, 0))
+        # plt.show()
 
         return anchor_img, positive_img, negative_img
 
