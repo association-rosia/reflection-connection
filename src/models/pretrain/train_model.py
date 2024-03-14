@@ -26,8 +26,6 @@ def main():
 
 
 def get_lightning(config, wandb_config, checkpoint=None):
-    model = pretrain_l.get_model(wandb_config)
-
     kargs = {
         'config': config,
         'wandb_config': wandb_config
