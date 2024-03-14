@@ -33,12 +33,14 @@ class RefConLightning(pl.LightningModule):
     #     return student_outputs
 
     def dino_forward(self, student_outputs, teacher_outputs):
-        ps = torch.softmax(self.student_dino_head(student_outputs.last_hidden_state[:, 0]), dim=-1)
+        dino_student_logits = self.student_dino_head(student_outputs.last_hidden_state[:, 0])
+        dino_student_ps = torch.softmax(dino_student_logits, dim=-1)
 
         with torch.no_grad():
-            pt = torch.softmax(self.teacher_dino_head(teacher_outputs.last_hidden_state[:, 0]), dim=-1)
+            dino_teacher_logits = self.teacher_dino_head(teacher_outputs.last_hidden_state[:, 0])
+            dino_teacher_ps = self.sinkhorn_knopp(dino_teacher_logits)
 
-        return ps, pt
+        return dino_student_ps, dino_teacher_ps  # DINO prototype scores
 
     def training_step(self, batch, batch_idx):
         loss = 0
@@ -46,8 +48,8 @@ class RefConLightning(pl.LightningModule):
         student_outputs = self.student_vit(pixel_values=batch['dino_student_inputs'])
         teacher_outputs = self.teacher_vit(pixel_values=batch['dino_teacher_inputs'])
 
-        dino_ps, dino_pt = self.dino_forward(student_outputs, teacher_outputs)
-        loss += self.dino_loss(dino_ps, dino_pt)
+        dino_student_ps, dino_teacher_ps = self.dino_forward(student_outputs, teacher_outputs)
+        loss += self.dino_loss(dino_student_ps, dino_teacher_ps)
 
         self.update_teacher()
 
@@ -70,11 +72,30 @@ class RefConLightning(pl.LightningModule):
             param.requires_grad = False
 
     @torch.no_grad()
+    def sinkhorn_knopp(tensor, teacher_temp=0.07, iterations=3):
+        Q = torch.exp(tensor / teacher_temp).t()
+        Q /= Q.sum()
+
+        u = torch.zeros(Q.shape[0]).to(tensor.device)
+        r = torch.ones(Q.shape[0]).to(tensor.device) / Q.shape[0]
+        c = torch.ones(Q.shape[1]).to(tensor.device) / Q.shape[1]
+
+        for _ in range(iterations):
+            u = Q.sum(dim=1)
+            Q *= (r / u).unsqueeze(1)
+            Q *= (c / Q.sum(dim=0)).unsqueeze(0)
+
+        Q /= Q.sum(dim=0, keepdim=True)
+
+        return Q.t()
+
+    @torch.no_grad()
     def update_teacher(self, teacher_momentum=0.992):
         for teacher_param, student_param in zip(self.teacher_vit.parameters(), self.student_vit.parameters()):
             teacher_param.data = teacher_momentum * teacher_param.data + (1 - teacher_momentum) * student_param.data
 
-        for teacher_param, student_param in zip(self.teacher_dino_head.parameters(), self.student_dino_head.parameters()):
+        for teacher_param, student_param in zip(self.teacher_dino_head.parameters(),
+                                                self.student_dino_head.parameters()):
             teacher_param.data = teacher_momentum * teacher_param.data + (1 - teacher_momentum) * student_param.data
 
     def train_dataloader(self):
