@@ -14,3 +14,5 @@ model_id: 'ViT_L_16_SEISMIC31K_SGD'
 batch_size: 32
 
 lr: 0.000005
+
+devices: [ 0 ]
