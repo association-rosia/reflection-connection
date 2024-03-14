@@ -72,7 +72,7 @@ class RefConLightning(pl.LightningModule):
             param.requires_grad = False
 
     @torch.no_grad()
-    def sinkhorn_knopp(tensor, teacher_temp=0.07, iterations=3):
+    def sinkhorn_knopp(self, tensor, teacher_temp=0.07, iterations=3):
         Q = torch.exp(tensor / teacher_temp).t()
         Q /= Q.sum()
 
