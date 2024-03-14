@@ -1,5 +1,14 @@
+import torch
 import torch.nn.functional as F
 from torch import nn
+
+
+class DINOLoss(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, ps, pt):
+        return -(pt * torch.log(ps)).sum(dim=1).mean()
 
 
 def make_triplet_criterion(wandb_config):

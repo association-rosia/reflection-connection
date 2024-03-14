@@ -28,16 +28,15 @@ class RefCoPretrainDataset(Dataset):
 
     def __getitem__(self, idx):
         image_path = self.images_path[idx]
+        dino_student_inputs = self._load_image(image_path)
+        dino_teacher_inputs = self._load_image(image_path)
 
-        image = self._load_image(image_path)
-        plt.imshow(image.permute(1, 2, 0))
-        plt.show()
+        item = {
+            'dino_student_inputs': dino_student_inputs,
+            'dino_teacher_inputs': dino_teacher_inputs
+        }
 
-        image = self._load_image(image_path)
-        plt.imshow(image.permute(1, 2, 0))
-        plt.show()
-
-        return
+        return item
 
 
 def get_images_path(config):
