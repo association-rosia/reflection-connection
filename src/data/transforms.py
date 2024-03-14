@@ -38,8 +38,10 @@ class RefConfProcessor:
             transforms = v2.Compose([
                 v2.RandomResizedCrop(
                     size=self.wandb_config['crop_size'],
+                    scale=(0.32, 1.0),
                     interpolation=tvF.InterpolationMode.BICUBIC
-                )
+                ),
+                v2.RandomHorizontalFlip()
             ])
 
         return transforms
