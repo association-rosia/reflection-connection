@@ -5,7 +5,7 @@ ibot:
   separate_head: true
   head_n_prototypes: 131072
 train:
-  batch_size_per_gpu: 24
+  batch_size_per_gpu: 32
   dataset_path: ImageNet:split=TRAIN:root=/home/external-rosia/rosia/reflection-connection/data/processed/pretrain/:extra=/home/external-rosia/rosia/reflection-connection/data/processed/pretrain/extra/
   centering: sinkhorn_knopp
 student:
@@ -19,10 +19,11 @@ teacher:
   teacher_temp: 0.08
 optim:
   epochs: 100
-  weight_decay_start: 0.01
-  weight_decay_end: 0.1
-  base_lr: 0.001
-  warmup_epochs: 20
+  weight_decay_start: 0.001
+  weight_decay_end: 0.05
+  base_lr: 0.0002
+  min_lr: 0.00001
+  warmup_epochs: 10
   clip_grad: 2.0
   layerwise_decay: 0.95
 crops:
