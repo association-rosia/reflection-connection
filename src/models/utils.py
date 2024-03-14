@@ -35,7 +35,7 @@ def get_trainer(config):
         )
     else:
         trainer = pl.Trainer(
-            devices=devices,
+            devices=wandb.config.devices,
             max_epochs=wandb.config.max_epochs,
             logger=pl.loggers.WandbLogger(),
             callbacks=[checkpoint_callback, early_stopping_callback],
