@@ -7,7 +7,7 @@ criterion: 'TMWDL-Cosine'
 contrast_factor: 15
 size: 256
 crop_size: 224
-exclude_anchor: ['Boring']
+exclude_anchor: [ 'Boring' ]
 
 model_id: 'ViT_L_16_SEISMIC31K_SGD'
 

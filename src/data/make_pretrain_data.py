@@ -130,10 +130,9 @@ def check_data():
 
 def count_images(config):
     pretrain_train_path = os.path.join(config['path']['data'], 'processed', 'pretrain')
-    folders = os.listdir(pretrain_train_path)
     pretrain_train_glob = os.path.join(pretrain_train_path, '**/*.png')
     images = glob(pretrain_train_glob, recursive=True)
-    print(f'Final number of folders {len(folders)} - Final number of images: {len(images)}')
+    print(f'Final number of images: {len(images)}')
 
 
 if __name__ == "__main__":
