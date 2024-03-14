@@ -33,6 +33,15 @@ def get_trainer(config):
             limit_train_batches=5,
             limit_val_batches=5
         )
+    elif len(wandb.config.devices) > 1:
+        trainer = pl.Trainer(
+            devices=wandb.config.devices,
+            max_epochs=wandb.config.max_epochs,
+            logger=pl.loggers.WandbLogger(),
+            callbacks=[checkpoint_callback],
+            precision='16-mixed',
+            strategy='ddp_find_unused_parameters_true'
+        )
     else:
         trainer = pl.Trainer(
             devices=wandb.config.devices,
