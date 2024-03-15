@@ -14,7 +14,7 @@ class RefConLightning(pl.LightningModule):
         self.config = config
         self.wandb_config = wandb_config
 
-        self.student_vit = ViTModel.from_pretrained(self.wandb_config['model_id'])
+        self.student_vit = ViTModel.from_pretrained(self.wandb_config['model_id'], use_mask_token=True)
         self.teacher_vit = ViTModel.from_pretrained(self.wandb_config['model_id'])
 
         self.student_head = RefConHead(768, self.wandb_config['num_prototypes'])
@@ -42,6 +42,7 @@ class RefConLightning(pl.LightningModule):
         student_outputs = self.student_vit(pixel_values=batch['ibot_inputs'], bool_masked_pos=bool_masked_pos)
         teacher_outputs = self.teacher_vit(pixel_values=batch['ibot_inputs'])
 
+        print(student_outputs.keys())
         print(student_outputs.last_hidden_state.shape)
         ibot_student_logits = self.student_head(student_outputs.last_hidden_state[:, 0])
         ibot_student_ps = torch.softmax(ibot_student_logits, dim=-1)

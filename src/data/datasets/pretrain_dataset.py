@@ -33,7 +33,7 @@ class RefCoPretrainDataset(Dataset):
         dino_student_inputs = self._load_image(image_path)
         dino_teacher_inputs = self._load_image(image_path)
         ibot_inputs = self._load_image(image_path)
-        ibot_bool_masked_pos = torch.randint(0, 2, (self.wandb_config['num_patches'],), dtype=torch.float32)
+        ibot_bool_masked_pos = torch.randint(0, 2, (self.wandb_config['num_patches'],)).bool()
 
         item = {
             'dino_student_inputs': dino_student_inputs,
