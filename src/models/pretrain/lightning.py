@@ -43,14 +43,12 @@ class RefConLightning(pl.LightningModule):
         student_outputs = self.student_vit(pixel_values=batch['ibot_inputs'], bool_masked_pos=bool_masked_pos)
         teacher_outputs = self.teacher_vit(pixel_values=batch['ibot_inputs'])
 
-        print(student_outputs.keys())
-        print(student_outputs.last_hidden_state.shape)
-
         bool_masked_idx = [index + 1 for index in (bool_masked_pos == 1).nonzero(as_tuple=True)[0].tolist()]
         ibot_student_logits = self.student_head(student_outputs.last_hidden_state[:, bool_masked_idx])
         ibot_student_ps = torch.softmax(ibot_student_logits, dim=-1)
 
         with torch.no_grad():
+            print(teacher_outputs.shape)
             dino_teacher_logits = self.teacher_head(teacher_outputs.last_hidden_state[:, bool_masked_idx])
             print(dino_teacher_logits.shape)
             ibot_teacher_ps = self.sinkhorn_knopp(dino_teacher_logits)
