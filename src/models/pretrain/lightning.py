@@ -80,38 +80,42 @@ class RefConLightning(pl.LightningModule):
         optimizer = torch.optim.Adam(self.student_vit.parameters(), lr=self.wandb_config['lr'])
         return optimizer
 
+    @torch.no_grad()
+    def sinkhorn_knopp(self, logits, temperature=0.07, n_masked_patches_tensor=None, n_iterations=3):
+        logits = logits.float()
+        Q = torch.exp(logits / temperature).t()  # Transpose for K-by-B format
+
+        # Determine B (batch size) based on the input
+        if n_masked_patches_tensor is not None:
+            B = n_masked_patches_tensor
+        else:
+            B = Q.shape[1]  # Simply use the second dimension of Q if n_masked_patches_tensor is not provided
+
+        K = Q.shape[0]  # Number of prototypes
+
+        # Normalize the matrix so the sum equals 1
+        sum_Q = torch.sum(Q)
+        Q /= sum_Q
+
+        for it in range(n_iterations):
+            # Normalize each row: total weight per prototype must be 1/K
+            sum_of_rows = torch.sum(Q, dim=1, keepdim=True)
+            Q /= sum_of_rows
+            Q /= K
+
+            # Normalize each column: total weight per sample must be 1/B
+            Q /= torch.sum(Q, dim=0, keepdim=True)
+            Q /= B
+
+        Q *= B  # Columns must sum to 1, making Q an assignment matrix
+        return Q.t()  # Transpose back to original format
+
     def freeze_teacher_params(self):
         for param in self.teacher_vit.parameters():
             param.requires_grad = False
 
         for param in self.student_head.parameters():
             param.requires_grad = False
-
-    @torch.no_grad()
-    def sinkhorn_knopp(self, tensor, teacher_temp=0.07, iterations=3):
-        original_dim = tensor.dim()
-        # If the tensor is 2D, unsqueeze to add a dummy batch dimension
-        if original_dim == 2:
-            tensor = tensor.unsqueeze(0)
-
-        tensor = torch.exp(tensor / teacher_temp)
-        Q = tensor / tensor.sum(dim=-1, keepdim=True).sum(dim=-2, keepdim=True)
-
-        r = torch.ones((Q.shape[0], Q.shape[1]), device=tensor.device) / Q.shape[1]
-        c = torch.ones((Q.shape[0], Q.shape[2]), device=tensor.device) / Q.shape[2]
-
-        for _ in range(iterations):
-            u = Q.sum(dim=2)
-            Q *= (r / u).unsqueeze(-1)
-            Q *= (c / Q.sum(dim=1, keepdim=True)).unsqueeze(-2)
-
-        Q /= Q.sum(dim=-1, keepdim=True).sum(dim=-2, keepdim=True)
-
-        # If a dummy batch dimension was added, remove it before returning
-        if original_dim == 2:
-            Q = Q.squeeze(0)
-
-        return Q
 
     @torch.no_grad()
     def update_teacher(self, teacher_momentum=0.994):
