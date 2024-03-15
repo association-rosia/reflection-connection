@@ -44,7 +44,6 @@ class RefConLightning(pl.LightningModule):
         teacher_outputs = self.teacher_vit(pixel_values=batch['ibot_inputs'])
 
         ibot_student_logits = self.student_head(student_outputs.last_hidden_state)
-        print(ibot_student_logits.shape)
         ibot_student_ps = torch.softmax(ibot_student_logits, dim=-1)
         print(ibot_student_ps.shape)
 
@@ -90,21 +89,28 @@ class RefConLightning(pl.LightningModule):
 
     @torch.no_grad()
     def sinkhorn_knopp(self, tensor, teacher_temp=0.07, iterations=3):
-        Q = torch.exp(tensor / teacher_temp).t()
-        Q /= Q.sum()
+        tensor = torch.exp(tensor / teacher_temp)
+        batch_size, num_rows, num_cols = tensor.shape
 
-        u = torch.zeros(Q.shape[0]).to(tensor.device)
-        r = torch.ones(Q.shape[0]).to(tensor.device) / Q.shape[0]
-        c = torch.ones(Q.shape[1]).to(tensor.device) / Q.shape[1]
+        # Original normalization adapted for 3D tensor
+        Q = tensor.view(batch_size, num_rows, num_cols)
+        Q /= Q.sum(dim=-1, keepdim=True).sum(dim=-2, keepdim=True)
+
+        r = torch.ones((batch_size, num_rows), device=tensor.device) / num_rows
+        c = torch.ones((batch_size, num_cols), device=tensor.device) / num_cols
 
         for _ in range(iterations):
-            u = Q.sum(dim=1)
-            Q *= (r / u).unsqueeze(1)
-            Q *= (c / Q.sum(dim=0)).unsqueeze(0)
+            u = Q.sum(dim=2)
+            Q *= (r / u).unsqueeze(-1)
+            Q *= (c / Q.sum(dim=1, keepdim=True)).unsqueeze(-2)
 
-        Q /= Q.sum(dim=0, keepdim=True)
+        Q /= Q.sum(dim=2, keepdim=True).sum(dim=1, keepdim=True)
 
-        return Q.t()
+        # If you need to transpose the last two dimensions back to their original order
+        # Adjust this if your model's subsequent operations require a different dimension order
+        Q = Q.permute(0, 2, 1)  # This switches back the last two dimensions
+
+        return Q
 
     @torch.no_grad()
     def update_teacher(self, teacher_momentum=0.994):
