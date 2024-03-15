@@ -86,8 +86,8 @@ class IterativeTrainer:
         
         return f'{wandb.run.name}-{wandb.run.id}.json'
 
-    def _get_query_paths_labels(self, iterative_data):
-        augmented_dataset = utils.load_augmented_dataset(iterative_data)
+    def _get_query_paths_labels(self):
+        augmented_dataset = utils.load_augmented_dataset(wandb.config)
         query_paths, query_labels = utils.get_paths_labels(self.curated_folder)
         query_paths.extend([image_dict['image_path'] for image_dict in augmented_dataset])
         query_labels.extend([image_dict['label'] for image_dict in augmented_dataset])
@@ -124,11 +124,11 @@ class CuratedBuilder:
         if len(query_labels.shape) != 1:
             raise ValueError(f'Expected query_labels to be 1-dimensional array, got {query_labels.shape} instead')
         
-        if matched_paths.shape != (query_labels.shape[0], self.iterative_config['images_by_iterations']):
-            raise ValueError(f'Expected matched_paths to have shape {(query_labels.shape[0], self.iterative_config['images_by_iterations'])}, got {matched_paths.shape} instead')
+        if matched_paths.shape != (query_labels.shape[0], self.iterative_config["images_by_iterations"]):
+            raise ValueError(f'Expected matched_paths to have shape {(query_labels.shape[0], self.iterative_config["images_by_iterations"])}, got {matched_paths.shape} instead')
         
         if scores.shape != (query_labels.shape[0], self.iterative_config['images_by_iterations']):
-            raise ValueError(f'Expected {self.score_mode}_scores to have shape {(query_labels.shape[0], self.iterative_config['images_by_iterations'])}, got {scores.shape} instead')
+            raise ValueError(f'Expected {self.score_mode}_scores to have shape {(query_labels.shape[0], self.iterative_config["images_by_iterations"])}, got {scores.shape} instead')
             
         for i, x in enumerate(query_labels):
             image_paths = matched_paths[i]
@@ -159,3 +159,6 @@ class CuratedBuilder:
         
         self.build(query_labels, matched_paths, scores)
         self.to_json(json_name)
+
+if __name__ == '__main__':
+    main()

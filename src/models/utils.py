@@ -19,7 +19,8 @@ def get_lightning_library(wandb_config):
 
 
 def get_lightning(config, wandb_config, checkpoint=None):
-    model = vit_l.get_model(wandb_config)
+    lightning_module = get_lightning_library(wandb_config)
+    model = lightning_module.get_model(wandb_config)
 
     kwargs = {
         'config': config,
@@ -28,10 +29,10 @@ def get_lightning(config, wandb_config, checkpoint=None):
     }
 
     if checkpoint is None:
-        lightning = vit_l.RefConLightning(**kwargs)
+        lightning = lightning_module.RefConLightning(**kwargs)
     else:
         path_checkpoint = os.path.join(config['path']['models'], checkpoint)
-        lightning = vit_l.RefConLightning.load_from_checkpoint(path_checkpoint, **kwargs)
+        lightning = lightning_module.RefConLightning.load_from_checkpoint(path_checkpoint, **kwargs)
 
     return lightning
 

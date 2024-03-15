@@ -80,7 +80,7 @@ class RunDemo:
 
 
 def load_augmented_dataset(wandb_config):
-    if wandb_config['iterative_data'] is None:
+    if wandb_config.get('iterative_data', None) is None:
         return []
     config = get_config()
     path = os.path.join(config['path']['data'], 'processed', 'train', wandb_config['iterative_data'])
@@ -108,4 +108,4 @@ def get_paths_labels(folder_path):
                     labels.append(class_name)
                     paths.append(img_path)
     
-    return labels, paths
+    return paths, labels
