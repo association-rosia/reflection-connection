@@ -52,7 +52,8 @@ class RefConLightning(pl.LightningModule):
 
         with torch.no_grad():
             dino_teacher_logits = self.teacher_head(teacher_outputs.last_hidden_state[:, bool_masked_idx])
-            ibot_teacher_ps = self.sinkhorn_knopp(dino_teacher_logits, )
+            print(dino_teacher_logits.shape)
+            ibot_teacher_ps = self.sinkhorn_knopp(dino_teacher_logits)
 
         return ibot_student_ps, ibot_teacher_ps  # iBOT prototype scores
 
