@@ -1,8 +1,8 @@
 iterations: 4
 
 images_by_iterations: 10
-curated_treshold: 0.2
-duplicate_treshold: -1
+curated_threshold: 0.1
+duplicate_threshold: 0
 
 model_config: 'dinov2.yml'
 
