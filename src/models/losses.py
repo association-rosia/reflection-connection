@@ -7,7 +7,6 @@ class DINOLoss(nn.Module):
     def __init__(self, wandb_config):
         super().__init__()
         self.wandb_config = wandb_config
-        self.center_momentum = center_momentum
         self.register_buffer('center', torch.zeros(1, self.wandb_config['num_prototypes']))
         self.updated = True
         self.len_teacher_logits = None
@@ -35,8 +34,9 @@ class DINOLoss(nn.Module):
     @torch.no_grad()
     def apply_center_update(self):
         if self.updated is False:
+            center_momentum = self.wandb_config['center_momentum']
             _t = self.async_batch_center / self.len_teacher_logits
-            self.center = self.center * self.wandb_config['center_momentum'] + _t * (1 - self.wandb_config['center_momentum'])
+            self.center = self.center * center_momentum + _t * (1 - center_momentum)
             self.updated = True
 
 
@@ -75,8 +75,9 @@ class iBOTLoss(nn.Module):
     @torch.no_grad()
     def apply_center_update(self):
         if self.updated is False:
+            center_momentum = self.wandb_config['center_momentum']
             _t = self.async_batch_center / self.len_teacher_logits
-            self.center = self.center * self.wandb_config['center_momentum'] + _t * (1 - self.wandb_config['center_momentum'])
+            self.center = self.center * center_momentum + _t * (1 - center_momentum)
             self.updated = True
 
 
