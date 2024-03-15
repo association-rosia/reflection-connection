@@ -8,6 +8,7 @@ crop_size: 224
 model_id: 'google/vit-base-patch16-224-in21k'
 num_patches: 196 # (crop_size // patch_size) ** 2
 num_prototypes: 1000
+center_momentum: 0.9
 
 batch_size: 32
 

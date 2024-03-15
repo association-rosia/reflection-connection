@@ -4,44 +4,49 @@ from torch import nn
 
 
 class DINOLoss(nn.Module):
-    def __init__(self):
+    def __init__(self, wandb_config):
         super().__init__()
-        self.student_temp = student_temp
+        self.wandb_config = wandb_config
         self.center_momentum = center_momentum
-        self.register_buffer('center', torch.zeros(1, out_dim))
+        self.register_buffer('center', torch.zeros(1, self.wandb_config['num_prototypes']))
         self.updated = True
-        self.len_teacher_output = None
+        self.len_teacher_logits = None
         self.async_batch_center = None
 
     def forward(self, ps, pt):
         return -(pt * torch.log(ps)).sum(dim=1).mean()
 
     @torch.no_grad()
-    def update_center(self, teacher_output):
-        self.reduce_center_update(teacher_output)
+    def softmax_center_teacher(self, teacher_logits, teacher_temp=0.07):
+        self.apply_center_update()
+
+        return F.softmax((teacher_logits - self.center) / teacher_temp, dim=-1)
 
     @torch.no_grad()
-    def reduce_center_update(self, teacher_output):
+    def update_center(self, teacher_logits):
+        self.reduce_center_update(teacher_logits)
+
+    @torch.no_grad()
+    def reduce_center_update(self, teacher_logits):
         self.updated = False
-        self.len_teacher_output = len(teacher_output)
-        self.async_batch_center = torch.sum(teacher_output, dim=0, keepdim=True)
+        self.len_teacher_logits = len(teacher_logits)
+        self.async_batch_center = torch.sum(teacher_logits, dim=0, keepdim=True)
 
     @torch.no_grad()
     def apply_center_update(self):
         if self.updated is False:
-            _t = self.async_batch_center / self.len_teacher_output
-            self.center = self.center * self.center_momentum + _t * (1 - self.center_momentum)
+            _t = self.async_batch_center / self.len_teacher_logits
+            self.center = self.center * self.wandb_config['center_momentum'] + _t * (1 - self.wandb_config['center_momentum'])
             self.updated = True
 
 
 class iBOTLoss(nn.Module):
-    def __init__(self):
+    def __init__(self, wandb_config):
         super().__init__()
-        self.student_temp = student_temp
-        self.center_momentum = center_momentum
-        self.register_buffer('center', torch.zeros(1, 1, patch_out_dim))
+        self.wandb_config = wandb_config
+        self.register_buffer('center', torch.zeros(1, 1, self.wandb_config['num_prototypes']))
         self.updated = True
-        self.len_teacher_patch_tokens = None
+        self.len_teacher_logits = None
         self.async_batch_center = None
 
     def forward(self, ps, pt, bool_masked_pos):
@@ -52,26 +57,26 @@ class iBOTLoss(nn.Module):
 
         return loss
 
-    def softmax_center_teacher(self, teacher_patch_tokens, teacher_temp):
+    def softmax_center_teacher(self, teacher_logits, teacher_temp=0.07):
         self.apply_center_update()
 
-        return F.softmax((teacher_patch_tokens - self.center) / teacher_temp, dim=-1)
+        return F.softmax((teacher_logits - self.center) / teacher_temp, dim=-1)
 
     @torch.no_grad()
-    def update_center(self, teacher_patch_tokens):
-        self.reduce_center_update(teacher_patch_tokens)
+    def update_center(self, teacher_logits):
+        self.reduce_center_update(teacher_logits)
 
     @torch.no_grad()
-    def reduce_center_update(self, teacher_patch_tokens):
+    def reduce_center_update(self, teacher_logits):
         self.updated = False
-        self.len_teacher_patch_tokens = len(teacher_patch_tokens)
-        self.async_batch_center = torch.sum(teacher_patch_tokens.mean(1), dim=0, keepdim=True)
+        self.len_teacher_logits = len(teacher_logits)
+        self.async_batch_center = torch.sum(teacher_logits.mean(1), dim=0, keepdim=True)
 
     @torch.no_grad()
     def apply_center_update(self):
         if self.updated is False:
-            _t = self.async_batch_center / self.len_teacher_patch_tokens
-            self.center = self.center * self.center_momentum + _t * (1 - self.center_momentum)
+            _t = self.async_batch_center / self.len_teacher_logits
+            self.center = self.center * self.wandb_config['center_momentum'] + _t * (1 - self.wandb_config['center_momentum'])
             self.updated = True
 
 

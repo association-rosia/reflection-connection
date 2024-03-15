@@ -20,8 +20,8 @@ class RefConLightning(pl.LightningModule):
         self.student_head = RefConHead(768, self.wandb_config['num_prototypes'])
         self.teacher_head = RefConHead(768, self.wandb_config['num_prototypes'])
 
-        self.dino_loss = DINOLoss()
-        self.ibot_loss = iBOTLoss()
+        self.dino_loss = DINOLoss(self.wandb_config)
+        self.ibot_loss = iBOTLoss(self.wandb_config)
 
         self.freeze_teacher_params()
 
@@ -34,7 +34,8 @@ class RefConLightning(pl.LightningModule):
 
         with torch.no_grad():
             dino_teacher_logits = self.teacher_head(teacher_outputs.last_hidden_state[:, 0])
-            dino_teacher_ps = self.sinkhorn_knopp(dino_teacher_logits)
+            dino_teacher_ps = self.dino_loss.softmax_center_teacher(dino_teacher_logits)
+            self.dino_loss.update_center(dino_teacher_logits)
 
         return dino_student_ps, dino_teacher_ps  # DINO prototype scores
 
@@ -45,12 +46,11 @@ class RefConLightning(pl.LightningModule):
 
         ibot_student_logits = self.student_head(student_outputs.last_hidden_state)
         ibot_student_ps = torch.softmax(ibot_student_logits, dim=-1)
-        print(ibot_student_ps.shape)
 
         with torch.no_grad():
-            dino_teacher_logits = self.teacher_head(teacher_outputs.last_hidden_state)
-            print(dino_teacher_logits.shape)
-            ibot_teacher_ps = self.sinkhorn_knopp(dino_teacher_logits)
+            ibot_teacher_logits = self.teacher_head(teacher_outputs.last_hidden_state)
+            ibot_teacher_ps = self.ibot_loss.softmax_center_teacher(ibot_teacher_logits)
+            self.ibot_loss.update_center(ibot_teacher_logits)
 
         return ibot_student_ps, ibot_teacher_ps  # iBOT prototype scores
 
