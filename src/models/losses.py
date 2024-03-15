@@ -50,8 +50,7 @@ class iBOTLoss(nn.Module):
         self.async_batch_center = None
 
     def forward(self, ps, pt, bool_masked_pos):
-        false_tensor = torch.tensor([False], device=bool_masked_pos.device).unsqueeze(1)
-        bool_masked_pos = torch.cat([false_tensor, bool_masked_pos], dim=0)
+        print(bool_masked_pos.shape)
         ps_masked = torch.masked_select(ps, bool_masked_pos.unsqueeze(-1)).view(-1, ps.size(-1))
         pt_masked = torch.masked_select(pt, bool_masked_pos.unsqueeze(-1)).view(-1, pt.size(-1))
 
