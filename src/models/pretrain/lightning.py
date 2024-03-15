@@ -15,7 +15,7 @@ class RefConLightning(pl.LightningModule):
         self.wandb_config = wandb_config
 
         self.student_vit = ViTModel.from_pretrained(self.wandb_config['model_id'], use_mask_token=True)
-        self.teacher_vit = ViTModel.from_pretrained(self.wandb_config['model_id'])
+        self.teacher_vit = ViTModel.from_pretrained(self.wandb_config['model_id'], use_mask_token=True)
 
         self.student_head = RefConHead(768, self.wandb_config['num_prototypes'])
         self.teacher_head = RefConHead(768, self.wandb_config['num_prototypes'])
@@ -84,7 +84,7 @@ class RefConLightning(pl.LightningModule):
         for param in self.teacher_vit.parameters():
             param.requires_grad = False
 
-        for param in self.student_head.parameters():
+        for param in self.teacher_head.parameters():
             param.requires_grad = False
 
     @torch.no_grad()
