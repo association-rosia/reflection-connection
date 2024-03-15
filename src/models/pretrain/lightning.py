@@ -48,7 +48,7 @@ class RefConLightning(pl.LightningModule):
         ibot_student_ps = torch.softmax(ibot_student_logits, dim=-1)
 
         with torch.no_grad():
-            print(teacher_outputs.shape)
+            print(teacher_outputs.last_hidden_state.shape)
             dino_teacher_logits = self.teacher_head(teacher_outputs.last_hidden_state[:, bool_masked_idx])
             print(dino_teacher_logits.shape)
             ibot_teacher_ps = self.sinkhorn_knopp(dino_teacher_logits)
