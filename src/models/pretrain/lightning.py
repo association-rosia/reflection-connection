@@ -44,7 +44,7 @@ class RefConLightning(pl.LightningModule):
         teacher_outputs = self.teacher_vit(pixel_values=batch['ibot_inputs'])
 
         bool_masked_idx = [index + 1 for index in torch.nonzero(bool_masked_pos)[0].tolist()]
-        print(bool_masked_idx)
+        print(bool_masked_idx, len(bool_masked_idx))
 
         ibot_student_logits = self.student_head(student_outputs.last_hidden_state[:, bool_masked_idx])
         ibot_student_ps = torch.softmax(ibot_student_logits, dim=-1)
