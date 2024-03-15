@@ -12,7 +12,7 @@ import wandb
 def main():
     config = utils.get_config()
     iterative_config = utils.load_config('iterative.yml')
-    uncurated_folder = os.path.join(config['path']['data'], 'processed', 'pretrain', 'train')
+    uncurated_folder = os.path.join(config['path']['data'], 'processed', 'pretrain')
     curated_folder = os.path.join(config['path']['data'], 'raw', 'train')
     
     iterative_trainer = IterativeTrainer(
@@ -49,7 +49,7 @@ class IterativeTrainer:
                 'duplicate_treshold': self.iterative_config['duplicate_treshold'],
             })
             self._train_model()
-            iterative_data = self._create_next_iterative_dataset(iterative_data)
+            iterative_data = self._create_next_iterative_dataset()
             wandb.finish()
 
     def _train_model(self):
@@ -57,10 +57,10 @@ class IterativeTrainer:
         lightning = mutils.get_lightning(self.config, wandb.config)
         trainer.fit(model=lightning)
 
-    def _create_next_iterative_dataset(self, iterative_data):
+    def _create_next_iterative_dataset(self):
         model = InferenceModel.load_from_wandb_run(self.config, wandb.run, 'cpu')
         embeddings_builder = EmbeddingsBuilder(device=self.device, return_names=True)
-        query_paths, query_labels = self._get_query_paths_labels(iterative_data)
+        query_paths, query_labels = self._get_query_paths_labels()
         corpus_paths = self._get_corpus_paths(query_paths)
         corpus_embeddings = embeddings_builder.build_embeddings(model=model, list_paths=corpus_paths, return_names=False)
         query_embeddings = embeddings_builder.build_embeddings(model=model, list_paths=query_paths, return_names=False)
@@ -95,8 +95,8 @@ class IterativeTrainer:
         return query_paths, query_labels
 
     def _get_corpus_paths(self, query_paths):
-        template_path = os.path.join(self.uncurated_folder, '**', '*.JPEG')
-        corpus_paths = glob(template_path, recursive=True)
+        template_path = os.path.join(self.uncurated_folder, '*.png')
+        corpus_paths = glob(template_path)
         
         return set(corpus_paths) - set(query_paths)
 

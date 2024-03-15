@@ -104,7 +104,7 @@ class RefConTripletDataset(Dataset):
 
 def get_train_val_split(wandb_config, image_paths, labels):
     train_image_paths, val_image_paths, train_labels, val_labels = train_test_split(
-        labels, image_paths,
+        image_paths, labels,
         train_size=0.8,
         random_state=wandb_config['random_state'],
         stratify=labels
@@ -122,12 +122,12 @@ def get_image_folder(config):
 
 def get_curated_class_path(config, wandb_config):
     image_folder = get_image_folder(config)
-    image_paths, labels = utils.get_paths_labels(image_folder)
+    curated_image_paths, curated_labels = utils.get_paths_labels(image_folder)
     augmented_dataset = utils.load_augmented_dataset(wandb_config)
     augmented_image_paths = [image_dict['image_path'] for image_dict in augmented_dataset]
     augmented_labels = [image_dict['label'] for image_dict in augmented_dataset]
-    curated_image_paths = image_paths + augmented_image_paths
-    curated_labels = labels + augmented_labels
+    curated_image_paths.extend(augmented_image_paths)
+    curated_labels.extend(augmented_labels)
     
     return curated_image_paths, curated_labels
 
