@@ -2,7 +2,7 @@ import torch
 from torch import nn
 import pytorch_lightning as pl
 from transformers import ViTModel
-from src.models.losses import DINOLoss
+from src.models.losses import DINOiBOTLoss
 from torch.utils.data import DataLoader
 import src.data.datasets.pretrain_dataset as td
 from src import utils
@@ -20,7 +20,8 @@ class RefConLightning(pl.LightningModule):
         self.student_head = RefConHead(768, self.wandb_config['num_prototypes'])
         self.teacher_head = RefConHead(768, self.wandb_config['num_prototypes'])
 
-        self.dino_loss = DINOLoss()
+        self.dino_loss = DINOiBOTLoss()
+        self.ibot_loss = DINOiBOTLoss()
 
         self.freeze_teacher_params()
 
@@ -44,14 +45,16 @@ class RefConLightning(pl.LightningModule):
 
         print(student_outputs.keys())
         print(student_outputs.last_hidden_state.shape)
-        ibot_student_logits = self.student_head(student_outputs.last_hidden_state[:, 0])
+
+        bool_masked_idx = [index + 1 for index in (bool_masked_pos == 1).nonzero(as_tuple=True)[0].tolist()]
+        ibot_student_logits = self.student_head(student_outputs.last_hidden_state[:, bool_masked_idx])
         ibot_student_ps = torch.softmax(ibot_student_logits, dim=-1)
 
         with torch.no_grad():
-            dino_teacher_logits = self.teacher_head(teacher_outputs.last_hidden_state[:, 0])
-            dino_teacher_ps = self.sinkhorn_knopp(dino_teacher_logits)
+            dino_teacher_logits = self.teacher_head(teacher_outputs.last_hidden_state[:, bool_masked_idx])
+            ibot_teacher_ps = self.sinkhorn_knopp(dino_teacher_logits, )
 
-        return ibot_student_ps, dino_teacher_ps  # iBOT prototype scores
+        return ibot_student_ps, ibot_teacher_ps  # iBOT prototype scores
 
     def training_step(self, batch, batch_idx):
         loss = 0
