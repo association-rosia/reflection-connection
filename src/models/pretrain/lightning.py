@@ -2,7 +2,7 @@ import torch
 from torch import nn
 import pytorch_lightning as pl
 from transformers import ViTModel
-from src.models.losses import DINOiBOTLoss
+from src.models.losses import DINOLoss, iBOTLoss
 from torch.utils.data import DataLoader
 import src.data.datasets.pretrain_dataset as td
 from src import utils
@@ -20,8 +20,8 @@ class RefConLightning(pl.LightningModule):
         self.student_head = RefConHead(768, self.wandb_config['num_prototypes'])
         self.teacher_head = RefConHead(768, self.wandb_config['num_prototypes'])
 
-        self.dino_loss = DINOiBOTLoss()
-        self.ibot_loss = DINOiBOTLoss()
+        self.dino_loss = DINOLoss()
+        self.ibot_loss = iBOTLoss()
 
         self.freeze_teacher_params()
 
@@ -62,7 +62,7 @@ class RefConLightning(pl.LightningModule):
         loss += dino_loss
 
         ibot_student_ps, ibot_teacher_ps = self.ibot_forward(batch)
-        ibot_loss = self.ibot_loss(ibot_student_ps, ibot_teacher_ps)
+        ibot_loss = self.ibot_loss(ibot_student_ps, ibot_teacher_ps, batch['ibot_bool_masked_pos'])
         loss += ibot_loss
 
         self.update_teacher()
@@ -89,26 +89,27 @@ class RefConLightning(pl.LightningModule):
 
     @torch.no_grad()
     def sinkhorn_knopp(self, tensor, teacher_temp=0.07, iterations=3):
+        original_dim = tensor.dim()
+        # If the tensor is 2D, unsqueeze to add a dummy batch dimension
+        if original_dim == 2:
+            tensor = tensor.unsqueeze(0)
+
         tensor = torch.exp(tensor / teacher_temp)
-        batch_size, num_rows, num_cols = tensor.shape
+        Q = tensor / tensor.sum(dim=-1, keepdim=True).sum(dim=-2, keepdim=True)
 
-        # Original normalization adapted for 3D tensor
-        Q = tensor.view(batch_size, num_rows, num_cols)
-        Q /= Q.sum(dim=-1, keepdim=True).sum(dim=-2, keepdim=True)
-
-        r = torch.ones((batch_size, num_rows), device=tensor.device) / num_rows
-        c = torch.ones((batch_size, num_cols), device=tensor.device) / num_cols
+        r = torch.ones((Q.shape[0], Q.shape[1]), device=tensor.device) / Q.shape[1]
+        c = torch.ones((Q.shape[0], Q.shape[2]), device=tensor.device) / Q.shape[2]
 
         for _ in range(iterations):
             u = Q.sum(dim=2)
             Q *= (r / u).unsqueeze(-1)
             Q *= (c / Q.sum(dim=1, keepdim=True)).unsqueeze(-2)
 
-        Q /= Q.sum(dim=2, keepdim=True).sum(dim=1, keepdim=True)
+        Q /= Q.sum(dim=-1, keepdim=True).sum(dim=-2, keepdim=True)
 
-        # If you need to transpose the last two dimensions back to their original order
-        # Adjust this if your model's subsequent operations require a different dimension order
-        Q = Q.permute(0, 2, 1)  # This switches back the last two dimensions
+        # If a dummy batch dimension was added, remove it before returning
+        if original_dim == 2:
+            Q = Q.squeeze(0)
 
         return Q
 

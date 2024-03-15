@@ -3,12 +3,26 @@ import torch.nn.functional as F
 from torch import nn
 
 
-class DINOiBOTLoss(nn.Module):
+class DINOLoss(nn.Module):
     def __init__(self):
         super().__init__()
 
     def forward(self, ps, pt):
         return -(pt * torch.log(ps)).sum(dim=1).mean()
+
+
+class iBOTLoss(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, ps, pt, bool_masked_pos):
+        # Apply the mask to select only the relevant entries for loss calculation
+        ps_masked = torch.masked_select(ps, bool_masked_pos.unsqueeze(-1)).view(-1, ps.size(-1))
+        pt_masked = torch.masked_select(pt, bool_masked_pos.unsqueeze(-1)).view(-1, pt.size(-1))
+
+        loss = -(pt_masked * torch.log(ps_masked)).sum(dim=1).mean()
+
+        return loss
 
 
 def make_triplet_criterion(wandb_config):
