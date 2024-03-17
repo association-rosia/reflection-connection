@@ -14,8 +14,17 @@ class DINOLoss(nn.Module):
         self.len_teacher_logits = None
         self.async_batch_center = None
 
+    # def forward(self, input: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+    #     return -(input * torch.log(target)).sum(dim=1).mean()
+
     def forward(self, input: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        return -(input * torch.log(target)).sum(dim=1).mean()
+        loss = 0
+        batch_size, _ = input.shape
+
+        for b in range(batch_size):
+            loss += input[b, :] * torch.log(target[b, :])
+
+        return - loss / batch_size
 
     @torch.no_grad()
     def softmax_center(self, teacher_logits, teacher_temp=0.07):
@@ -69,16 +78,16 @@ class iBOTLoss(nn.Module):
     #     return loss
 
     def forward(self, input: torch.Tensor, target: torch.Tensor, bool_masked_pos: torch.Tensor) -> torch.Tensor:
-        ibot_loss = 0
+        loss = 0
         batch_size, num_patches, _ = input.shape
 
         for b in range(batch_size):
             b_bool_masked_pos = bool_masked_pos[b]
             for p in range(num_patches):
                 if b_bool_masked_pos[p]:
-                    ibot_loss += input[b, p, :] * torch.log(target[b, p, :])
+                    loss += input[b, p, :] * torch.log(target[b, p, :])
 
-        return - ibot_loss / batch_size * num_patches
+        return - loss / batch_size * num_patches
 
     def softmax_center(self, teacher_logits, teacher_temp=0.07):
         self.apply_center_update()

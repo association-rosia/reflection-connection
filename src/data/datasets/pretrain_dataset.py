@@ -39,7 +39,7 @@ class RefCoPretrainDataset(Dataset):
             'dino_student_inputs': dino_student_inputs,
             'dino_teacher_inputs': dino_teacher_inputs,
             'ibot_inputs': ibot_inputs,
-            'ibot_bool_masked_pos': ibot_bool_masked_pos
+            'ibot_bool_masked_pos': ibot_bool_masked_pos  # TODO: add false on start
         }
 
         return item
