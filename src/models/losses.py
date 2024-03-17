@@ -14,9 +14,6 @@ class DINOLoss(nn.Module):
         self.len_teacher_logits = None
         self.async_batch_center = None
 
-    # def forward(self, input: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-    #     return -(input * torch.log(target)).sum(dim=1).mean()
-
     def forward(self, input: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         loss = 0
         batch_size, _ = input.shape
@@ -24,10 +21,9 @@ class DINOLoss(nn.Module):
         for b in range(batch_size):
             loss += input[b, :] * torch.log(target[b, :])
 
-        print(f'{- loss / batch_size}')
-        print(f'{-(input * torch.log(target)).sum(dim=1).mean()}')
+        loss = - (loss / batch_size).sum()
 
-        return - loss / batch_size  # TODO: compare with -(input * torch.log(target)).sum(dim=1).mean()
+        return loss
 
     @torch.no_grad()
     def softmax_center(self, teacher_logits, teacher_temp=0.07):
@@ -63,34 +59,25 @@ class iBOTLoss(nn.Module):
         self.len_teacher_logits = None
         self.async_batch_center = None
 
-    # def forward(self, ps, pt, bool_masked_pos):
-    #     print(ps.shape)
-    #     print(pt.shape)
-    #
-    #     sys.exit(0)
-    #
-    #     N, D = bool_masked_pos.shape
-    #     false_tensor = torch.zeros(N, 1, dtype=torch.bool, device=bool_masked_pos.device)
-    #     bool_masked_pos = torch.cat([false_tensor, bool_masked_pos], dim=1)
-    #
-    #     ps_masked = torch.masked_select(ps, bool_masked_pos.unsqueeze(-1)).view(-1, ps.size(-1))
-    #     pt_masked = torch.masked_select(pt, bool_masked_pos.unsqueeze(-1)).view(-1, pt.size(-1))
-    #
-    #     loss = -(pt_masked * torch.log(ps_masked)).sum(dim=1).mean()
-    #
-    #     return loss
-
     def forward(self, input: torch.Tensor, target: torch.Tensor, bool_masked_pos: torch.Tensor) -> torch.Tensor:
         loss = 0
         batch_size, num_patches, _ = input.shape
 
         for b in range(batch_size):
             b_bool_masked_pos = bool_masked_pos[b]
-            for p in range(num_patches):
-                if b_bool_masked_pos[p]:
-                    loss += input[b, p, :] * torch.log(target[b, p, :])
+            false_tensor = torch.tensor([0]).bool().to(b_bool_masked_pos.device)
+            b_bool_masked_pos = torch.cat([false_tensor, b_bool_masked_pos])
 
-        return - loss / batch_size * num_patches
+            loss_patch = 0
+            for p in range(num_patches):
+                if b_bool_masked_pos[p].item():
+                    loss_patch += input[b, p, :] * torch.log(target[b, p, :])
+
+            loss += loss_patch / b_bool_masked_pos.sum()
+
+        loss = - (loss / batch_size).sum()
+
+        return loss
 
     def softmax_center(self, teacher_logits, teacher_temp=0.07):
         self.apply_center_update()
