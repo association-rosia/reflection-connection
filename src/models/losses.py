@@ -24,7 +24,7 @@ class DINOLoss(nn.Module):
         for b in range(batch_size):
             loss += input[b, :] * torch.log(target[b, :])
 
-        return - loss / batch_size
+        return - loss / batch_size # TODO: compare with -(input * torch.log(target)).sum(dim=1).mean()
 
     @torch.no_grad()
     def softmax_center(self, teacher_logits, teacher_temp=0.07):
