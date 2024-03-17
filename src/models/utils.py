@@ -4,7 +4,7 @@ import pytorch_lightning as pl
 import wandb
 
 
-def get_trainer(config):
+def get_trainer(config, wandb_config):
     os.makedirs(config['path']['models'], exist_ok=True)
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
         save_top_k=1,
@@ -40,7 +40,8 @@ def get_trainer(config):
             logger=pl.loggers.WandbLogger(),
             callbacks=[checkpoint_callback],
             precision='16-mixed',
-            strategy='ddp_find_unused_parameters_true'
+            strategy='ddp_find_unused_parameters_true',
+            val_check_interval=wandb_config['val_check_interval']
         )
     else:
         trainer = pl.Trainer(

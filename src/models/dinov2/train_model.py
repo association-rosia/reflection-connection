@@ -19,7 +19,7 @@ torch.set_float32_matmul_precision('medium')
 def main():
     config = utils.get_config()
     wandb_config = utils.init_wandb('dinov2.yml')
-    trainer = mutils.get_trainer(config)
+    trainer = mutils.get_trainer(config, wandb_config)
     lightning = get_lightning(config, wandb_config)
     trainer.fit(model=lightning)
     wandb.finish()
