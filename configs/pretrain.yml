@@ -10,8 +10,8 @@ num_patches: 196 # (crop_size // patch_size) ** 2
 num_prototypes: 1000
 center_momentum: 0.9
 
-batch_size: 32
+batch_size: 128
 
-lr: 0.0001
+lr: 0.001
 
 devices: [ 0 ] # [ 0, 1, 2, 3 ]
