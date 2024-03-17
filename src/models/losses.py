@@ -1,3 +1,5 @@
+import sys
+
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -12,8 +14,8 @@ class DINOLoss(nn.Module):
         self.len_teacher_logits = None
         self.async_batch_center = None
 
-    def forward(self, ps, pt):
-        return -(pt * torch.log(ps)).sum(dim=1).mean()
+    def forward(self, input: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        return -(input * torch.log(target)).sum(dim=1).mean()
 
     @torch.no_grad()
     def softmax_center(self, teacher_logits, teacher_temp=0.07):
@@ -50,6 +52,11 @@ class iBOTLoss(nn.Module):
         self.async_batch_center = None
 
     def forward(self, ps, pt, bool_masked_pos):
+        print(ps.shape)
+        print(pt.shape)
+
+        sys.exit(0)
+
         N, D = bool_masked_pos.shape
         false_tensor = torch.zeros(N, 1, dtype=torch.bool, device=bool_masked_pos.device)
         bool_masked_pos = torch.cat([false_tensor, bool_masked_pos], dim=1)
@@ -60,6 +67,9 @@ class iBOTLoss(nn.Module):
         loss = -(pt_masked * torch.log(ps_masked)).sum(dim=1).mean()
 
         return loss
+
+    # def forward(self, input: torch.Tensor, target: torch.Tensor, bool_masked_pos: torch.Tensor) -> torch.Tensor:
+    #     return -(input * torch.log(target)).sum(dim=1).mean()
 
     def softmax_center(self, teacher_logits, teacher_temp=0.07):
         self.apply_center_update()
