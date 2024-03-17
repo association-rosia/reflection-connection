@@ -49,7 +49,8 @@ def get_trainer(config, wandb_config):
             max_epochs=wandb.config.max_epochs,
             logger=pl.loggers.WandbLogger(),
             callbacks=[checkpoint_callback, early_stopping_callback],
-            precision='16-mixed'
+            precision='16-mixed',
+            val_check_interval=wandb_config['val_check_interval']
         )
 
     return trainer
