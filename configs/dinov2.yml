@@ -12,6 +12,7 @@ exclude_anchor: [ 'Boring' ]
 model_id: 'facebook/dinov2-base'
 
 batch_size: 24
+val_check_interval: 1
 
 lr: 0.00001
 

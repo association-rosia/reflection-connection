@@ -12,6 +12,7 @@ exclude_anchor: [ 'Boring' ]
 model_id: 'ViT_L_16_SEISMIC31K_SGD'
 
 batch_size: 32
+val_check_interval: 1
 
 lr: 0.000005
 

@@ -12,6 +12,7 @@ exclude_anchor: [ 'Boring' ]
 model_id: 'openai/clip-vit-large-patch14'
 
 batch_size: 24
+val_check_interval: 1
 
 lr: 0.000001
 
