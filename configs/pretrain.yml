@@ -13,6 +13,6 @@ center_momentum: 0.9
 batch_size: 128
 val_check_interval: 0.1
 
-lr: 0.0001
+lr: 0.005
 
 devices: [ 0, 1, 2, 3 ]
