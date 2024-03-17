@@ -25,7 +25,7 @@ class RefConLightning(pl.LightningModule):
 
         self.freeze_teacher_params()
 
-    def dino_forward(self, batch):
+    def dino_forward(self, batch, set):
         student_outputs = self.student_vit(pixel_values=batch['dino_student_inputs'])
         teacher_outputs = self.teacher_vit(pixel_values=batch['dino_teacher_inputs'])
 
@@ -35,11 +35,13 @@ class RefConLightning(pl.LightningModule):
         with torch.no_grad():
             dino_teacher_logits = self.teacher_head(teacher_outputs.last_hidden_state[:, 0])
             dino_teacher_ps = self.dino_loss.softmax_center(dino_teacher_logits)
-            self.dino_loss.update_center(dino_teacher_logits)
+
+            if set == 'train':
+                self.dino_loss.update_center(dino_teacher_logits)
 
         return dino_student_ps, dino_teacher_ps  # DINO prototype scores
 
-    def ibot_forward(self, batch):
+    def ibot_forward(self, batch, set):
         bool_masked_pos = batch['ibot_bool_masked_pos']
         student_outputs = self.student_vit(pixel_values=batch['ibot_inputs'], bool_masked_pos=bool_masked_pos)
         teacher_outputs = self.teacher_vit(pixel_values=batch['ibot_inputs'])
@@ -50,20 +52,22 @@ class RefConLightning(pl.LightningModule):
         with torch.no_grad():
             ibot_teacher_logits = self.teacher_head(teacher_outputs.last_hidden_state)
             ibot_teacher_ps = self.ibot_loss.softmax_center(ibot_teacher_logits)
-            self.ibot_loss.update_center(ibot_teacher_logits)
+
+            if set == 'train':
+                self.ibot_loss.update_center(ibot_teacher_logits)
 
         return ibot_student_ps, ibot_teacher_ps  # iBOT prototype scores
 
     def training_step(self, batch, batch_idx):
-        loss = 0
+        train_loss = 0
 
-        dino_student_ps, dino_teacher_ps = self.dino_forward(batch)
+        dino_student_ps, dino_teacher_ps = self.dino_forward(batch, set='train')
         dino_loss = self.dino_loss(dino_student_ps, dino_teacher_ps)
-        loss += dino_loss
+        train_loss += dino_loss
 
-        ibot_student_ps, ibot_teacher_ps = self.ibot_forward(batch)
+        ibot_student_ps, ibot_teacher_ps = self.ibot_forward(batch, set='train')
         ibot_loss = self.ibot_loss(ibot_student_ps, ibot_teacher_ps, batch['ibot_bool_masked_pos'])
-        loss += ibot_loss
+        train_loss += ibot_loss
 
         self.update_teacher()
 
@@ -71,10 +75,30 @@ class RefConLightning(pl.LightningModule):
             'train/dino_loss': dino_loss,
             'train/ibot_loss': ibot_loss,
             # 'train/koleo_loss': koleo_loss,
-            'train/loss': loss
+            'train/loss': train_loss
         })
 
-        return loss
+        return train_loss
+
+    def validation_step(self, batch, batch_idx):
+        val_loss = 0
+
+        dino_student_ps, dino_teacher_ps = self.dino_forward(batch, set='val')
+        dino_loss = self.dino_loss(dino_student_ps, dino_teacher_ps)
+        val_loss += dino_loss
+
+        ibot_student_ps, ibot_teacher_ps = self.ibot_forward(batch, set='val')
+        ibot_loss = self.ibot_loss(ibot_student_ps, ibot_teacher_ps, batch['ibot_bool_masked_pos'])
+        val_loss += ibot_loss
+
+        self.log_dict({
+            'val/dino_loss': dino_loss,
+            'val/ibot_loss': ibot_loss,
+            # 'train/koleo_loss': koleo_loss,
+            'val/loss': val_loss
+        })
+
+        return val_loss
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.student_vit.parameters(), lr=self.wandb_config['lr'])
@@ -96,7 +120,7 @@ class RefConLightning(pl.LightningModule):
             teacher_param.data = teacher_momentum * teacher_param.data + (1 - teacher_momentum) * student_param.data
 
     def train_dataloader(self):
-        dataset = td.make_petrain_dataset(self.config, self.wandb_config)
+        dataset = td.make_petrain_dataset(self.config, self.wandb_config, set='train')
 
         dataloader = DataLoader(
             dataset=dataset,
@@ -104,6 +128,19 @@ class RefConLightning(pl.LightningModule):
             num_workers=self.config['archi']['num_workers'],
             drop_last=True,
             shuffle=True,
+        )
+
+        return dataloader
+
+    def val_dataloader(self):
+        dataset = td.make_petrain_dataset(self.config, self.wandb_config, set='val')
+
+        dataloader = DataLoader(
+            dataset=dataset,
+            batch_size=self.wandb_config['batch_size'],
+            num_workers=self.config['archi']['num_workers'],
+            drop_last=True,
+            shuffle=False,
         )
 
         return dataloader
