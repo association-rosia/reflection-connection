@@ -34,7 +34,7 @@ class RefConLightning(pl.LightningModule):
 
         with torch.no_grad():
             dino_teacher_logits = self.teacher_head(teacher_outputs.last_hidden_state[:, 0])
-            dino_teacher_ps = self.dino_loss.softmax_center_teacher(dino_teacher_logits)
+            dino_teacher_ps = self.dino_loss.softmax_center(dino_teacher_logits)
             self.dino_loss.update_center(dino_teacher_logits)
 
         return dino_student_ps, dino_teacher_ps  # DINO prototype scores
@@ -49,7 +49,7 @@ class RefConLightning(pl.LightningModule):
 
         with torch.no_grad():
             ibot_teacher_logits = self.teacher_head(teacher_outputs.last_hidden_state)
-            ibot_teacher_ps = self.ibot_loss.softmax_center_teacher(ibot_teacher_logits)
+            ibot_teacher_ps = self.ibot_loss.softmax_center(ibot_teacher_logits)
             self.ibot_loss.update_center(ibot_teacher_logits)
 
         return ibot_student_ps, ibot_teacher_ps  # iBOT prototype scores

@@ -16,7 +16,7 @@ class DINOLoss(nn.Module):
         return -(pt * torch.log(ps)).sum(dim=1).mean()
 
     @torch.no_grad()
-    def softmax_center_teacher(self, teacher_logits, teacher_temp=0.07):
+    def softmax_center(self, teacher_logits, teacher_temp=0.07):
         self.apply_center_update()
 
         return F.softmax((teacher_logits - self.center) / teacher_temp, dim=-1)
@@ -51,7 +51,7 @@ class iBOTLoss(nn.Module):
 
     def forward(self, ps, pt, bool_masked_pos):
         N, D = bool_masked_pos.shape
-        false_tensor = torch.zeros(N, 1, dtype=bool, device=bool_masked_pos.device)
+        false_tensor = torch.zeros(N, 1, dtype=torch.bool, device=bool_masked_pos.device)
         bool_masked_pos = torch.cat([false_tensor, bool_masked_pos], dim=1)
 
         ps_masked = torch.masked_select(ps, bool_masked_pos.unsqueeze(-1)).view(-1, ps.size(-1))
@@ -61,7 +61,7 @@ class iBOTLoss(nn.Module):
 
         return loss
 
-    def softmax_center_teacher(self, teacher_logits, teacher_temp=0.07):
+    def softmax_center(self, teacher_logits, teacher_temp=0.07):
         self.apply_center_update()
 
         return F.softmax((teacher_logits - self.center) / teacher_temp, dim=-1)
