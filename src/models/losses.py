@@ -51,25 +51,34 @@ class iBOTLoss(nn.Module):
         self.len_teacher_logits = None
         self.async_batch_center = None
 
-    def forward(self, ps, pt, bool_masked_pos):
-        print(ps.shape)
-        print(pt.shape)
+    # def forward(self, ps, pt, bool_masked_pos):
+    #     print(ps.shape)
+    #     print(pt.shape)
+    #
+    #     sys.exit(0)
+    #
+    #     N, D = bool_masked_pos.shape
+    #     false_tensor = torch.zeros(N, 1, dtype=torch.bool, device=bool_masked_pos.device)
+    #     bool_masked_pos = torch.cat([false_tensor, bool_masked_pos], dim=1)
+    #
+    #     ps_masked = torch.masked_select(ps, bool_masked_pos.unsqueeze(-1)).view(-1, ps.size(-1))
+    #     pt_masked = torch.masked_select(pt, bool_masked_pos.unsqueeze(-1)).view(-1, pt.size(-1))
+    #
+    #     loss = -(pt_masked * torch.log(ps_masked)).sum(dim=1).mean()
+    #
+    #     return loss
 
-        sys.exit(0)
+    def forward(self, input: torch.Tensor, target: torch.Tensor, bool_masked_pos: torch.Tensor) -> torch.Tensor:
+        ibot_loss = 0
+        batch_size, num_patches, _ = input.shape
 
-        N, D = bool_masked_pos.shape
-        false_tensor = torch.zeros(N, 1, dtype=torch.bool, device=bool_masked_pos.device)
-        bool_masked_pos = torch.cat([false_tensor, bool_masked_pos], dim=1)
+        for b in range(batch_size):
+            b_bool_masked_pos = bool_masked_pos[b]
+            for p in range(num_patches):
+                if b_bool_masked_pos[p]:
+                    ibot_loss += input[b, p, :] * torch.log(target[b, p, :])
 
-        ps_masked = torch.masked_select(ps, bool_masked_pos.unsqueeze(-1)).view(-1, ps.size(-1))
-        pt_masked = torch.masked_select(pt, bool_masked_pos.unsqueeze(-1)).view(-1, pt.size(-1))
-
-        loss = -(pt_masked * torch.log(ps_masked)).sum(dim=1).mean()
-
-        return loss
-
-    # def forward(self, input: torch.Tensor, target: torch.Tensor, bool_masked_pos: torch.Tensor) -> torch.Tensor:
-    #     return -(input * torch.log(target)).sum(dim=1).mean()
+        return - ibot_loss / batch_size * num_patches
 
     def softmax_center(self, teacher_logits, teacher_temp=0.07):
         self.apply_center_update()
