@@ -12,7 +12,7 @@ class ProcessorMode(Enum):
     """Processor modes
     Available modes are ``training`` and ``eval``.
     """
-
+    PRETRAINING = -1
     TRAINING = 0
     EVAL = 1
 
@@ -25,15 +25,27 @@ class RefConfProcessor:
         self.random_transforms = self._get_random_transforms()
 
     def _get_random_transforms(self):
-        return v2.Compose([
-            v2.RandomResizedCrop(
-                size=self.wandb_config['crop_size'],
-                interpolation=tvF.InterpolationMode.BICUBIC
-            ),
-            v2.RandomAutocontrast(),
-            v2.RandomHorizontalFlip()
-        ]) 
-    
+        if self.mode != ProcessorMode.PRETRAINING:
+            transforms = v2.Compose([
+                v2.RandomResizedCrop(
+                    size=self.wandb_config['crop_size'],
+                    interpolation=tvF.InterpolationMode.BICUBIC
+                ),
+                v2.RandomAutocontrast(),
+                v2.RandomHorizontalFlip()
+            ])
+        else:
+            transforms = v2.Compose([
+                v2.RandomResizedCrop(
+                    size=self.wandb_config['crop_size'],
+                    scale=(0.32, 1.0),
+                    interpolation=tvF.InterpolationMode.BICUBIC
+                ),
+                v2.RandomHorizontalFlip()
+            ])
+
+        return transforms
+
     @overload
     def preprocess_image(self, images: Image.Image) -> torch.Tensor:
         ...
@@ -49,19 +61,30 @@ class RefConfProcessor:
             return self._preprocess_image(images)
 
     def _preprocess_image(self, image):
-        if self.mode == ProcessorMode.TRAINING:
+        if self.mode == ProcessorMode.PRETRAINING:
+            return self._preprocess_pretraining_image(image)
+        elif self.mode == ProcessorMode.TRAINING:
             return self._preprocess_training_image(image)
         elif self.mode == ProcessorMode.EVAL:
             return self._preprocess_eval_image(image)
         else:
             raise ValueError(f'Mode have an incorrect value')
 
+    def _preprocess_pretraining_image(self, image: torch.Tensor | np.ndarray | Image.Image) -> torch.Tensor:
+        image = tvF.to_image(image)
+        image = tvF.to_dtype_image(image, torch.float32, scale=True)
+        # image = tvF.adjust_contrast(image, contrast_factor=self.wandb_config['contrast_factor'])
+        image = self.random_transforms(image)
+        # image = tvF.normalize(image, mean=self.config['data']['mean'], std=self.config['data']['std'])
+
+        return image
+
     def _preprocess_training_image(self, image: torch.Tensor | np.ndarray | Image.Image) -> torch.Tensor:
         image = tvF.to_image(image)
         image = tvF.to_dtype_image(image, torch.float32, scale=True)
         image = tvF.adjust_contrast(image, contrast_factor=self.wandb_config['contrast_factor'])
         image = self.random_transforms(image)
-        image = tvF.normalize(image, mean=self.config['data']['mean'], std=self.config['data']['std'])
+        # image = tvF.normalize(image, mean=self.config['data']['mean'], std=self.config['data']['std'])
 
         return image
 
@@ -70,14 +93,20 @@ class RefConfProcessor:
         image = tvF.to_dtype_image(image, torch.float32, scale=True)
         image = tvF.adjust_contrast(image, contrast_factor=self.wandb_config['contrast_factor'])
         image = tvF.resize(image, size=self.wandb_config['size'], interpolation=tvF.InterpolationMode.BICUBIC)
+
         if self.wandb_config.get('crop_size') is not None:
             image = tvF.center_crop(image, output_size=self.wandb_config['crop_size'])
-        image = tvF.normalize(image, mean=self.config['data']['mean'], std=self.config['data']['std'])
+
+        # image = tvF.normalize(image, mean=self.config['data']['mean'], std=self.config['data']['std'])
 
         return image
-    
+
     def __call__(self, image: Image.Image | list[Image.Image]) -> torch.Tensor:
         return self.preprocess_image(image)
+
+
+def make_pretraining_processor(config, wandb_config):
+    return RefConfProcessor(config, wandb_config, ProcessorMode.PRETRAINING)
 
 
 def make_training_processor(config, wandb_config):
@@ -98,6 +127,7 @@ def _debug():
     img = Image.open('data/raw/train/Boring/abwao.png').convert('RGB')
     train_preprocessor.preprocess_image(img)
     eval_preprocessor.preprocess_image(img)
+
 
 if __name__ == '__main__':
     _debug()

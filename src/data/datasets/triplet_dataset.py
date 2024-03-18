@@ -1,11 +1,14 @@
 import os
+
 import numpy as np
+from PIL import Image
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset
-from PIL import Image
 
 import src.data.transforms as dT
 from src import utils
+
+import matplotlib.pyplot as plt
 
 
 class RefConTripletDataset(Dataset):
@@ -30,6 +33,60 @@ class RefConTripletDataset(Dataset):
     def __len__(self):
         return len(self.targets)
 
+    @staticmethod
+    def _make_dict_path_img(labels, img_paths):
+        dict_path_img = {class_name: [] for class_name in set(labels)}
+        for class_name, path_img in zip(labels, img_paths):
+            dict_path_img[class_name].append(path_img)
+
+        return {k: np.asarray(v) for k, v in dict_path_img.items()}
+
+    def _remove_targets(self, targets, img_paths):
+        targets = np.asarray(targets)
+        img_paths = np.asarray(img_paths)
+        mask = np.isin(targets, self.wandb_config['exclude_anchor'], invert=True)
+
+        return targets[mask], img_paths[mask]
+
+    def _load_image(self, path):
+        with open(path, 'rb') as f:
+            img = Image.open(f)
+            img = img.convert('RGB')
+
+        return self.processor.preprocess_image(img)
+
+    @staticmethod
+    def _get_random_state(random_state=None):
+        if random_state is None:
+            return np.random
+        else:
+            return random_state
+
+    def _get_positive_img_path(self, anchor_name, anchor_img_path, random_state=None):
+        random_state = self._get_random_state(random_state)
+        positive_img_path = anchor_img_path
+        while positive_img_path == anchor_img_path:
+            positive_img_path = random_state.choice(self.dict_path_img[anchor_name])
+
+        return positive_img_path
+
+    def _get_negative_img_path(self, anchor_name, random_state=None):
+        random_state = self._get_random_state(random_state)
+        possible_classes = np.fromiter(self.set_class_name - {anchor_name}, dtype=object)
+        negative_name = random_state.choice(possible_classes)
+
+        return random_state.choice(self.dict_path_img[negative_name])
+
+    def _generate_triplets(self):
+        random_state = np.random.RandomState(self.wandb_config['random_state'])
+        triplets = []
+        for anchor_img_path, anchor_name in zip(self.img_paths, self.targets):
+            positive_img_path = self._get_positive_img_path(anchor_name, anchor_img_path, random_state)
+            negative_img_path = self._get_negative_img_path(anchor_name, random_state)
+            triplets.append((anchor_img_path, positive_img_path, negative_img_path))
+
+        return triplets
+
     def __getitem__(self, idx):
         if self.train:
             anchor_img_path = self.img_paths[idx]
@@ -40,66 +97,21 @@ class RefConTripletDataset(Dataset):
             anchor_img_path = self.triplets[idx][0]
             positive_img_path = self.triplets[idx][1]
             negative_img_path = self.triplets[idx][2]
-            
+
         anchor_img = self._load_image(anchor_img_path)
         positive_img = self._load_image(positive_img_path)
         negative_img = self._load_image(negative_img_path)
 
+        # plt.imshow(anchor_img.permute(1, 2, 0))
+        # plt.show()
+        #
+        # plt.imshow(positive_img.permute(1, 2, 0))
+        # plt.show()
+        #
+        # plt.imshow(negative_img.permute(1, 2, 0))
+        # plt.show()
+
         return anchor_img, positive_img, negative_img
-    
-    @staticmethod
-    def _make_dict_path_img(labels, img_paths):
-        dict_path_img = {class_name: [] for class_name in set(labels)}
-        for class_name, path_img in zip(labels, img_paths):
-            dict_path_img[class_name].append(path_img)
-
-        return {k: np.asarray(v) for k, v in dict_path_img.items()}
-    
-    def _remove_targets(self, targets, img_paths):
-        targets = np.asarray(targets)
-        img_paths = np.asarray(img_paths)
-        mask = np.isin(targets, self.wandb_config['exclude_anchor'], invert=True)
-
-        return targets[mask], img_paths[mask]
-    
-    def _load_image(self, path):
-        # open path as file to avoid ResourceWarning (https://github.com/python-pillow/Pillow/issues/835)
-        with open(path, "rb") as f:
-            img = Image.open(f)
-            img = img.convert("RGB")
-            return self.processor.preprocess_image(img)
-    
-    @staticmethod
-    def _get_random_state(random_state = None):
-        if random_state is None:
-            return np.random
-        else: 
-            return random_state
-
-    def _get_positive_img_path(self, anchor_name, anchor_img_path, random_state = None):
-        random_state = self._get_random_state(random_state)
-        positive_img_path = anchor_img_path
-        while positive_img_path == anchor_img_path:
-            positive_img_path = random_state.choice(self.dict_path_img[anchor_name])
-        
-        return positive_img_path
-    
-    def _get_negative_img_path(self, anchor_name, random_state = None):
-        random_state = self._get_random_state(random_state)
-        possible_classes = np.fromiter(self.set_class_name - {anchor_name}, dtype=object)
-        negative_name = random_state.choice(possible_classes)
-        
-        return random_state.choice(self.dict_path_img[negative_name])
-    
-    def _generate_triplets(self):
-        random_state = np.random.RandomState(self.wandb_config['random_state'])
-        triplets = []
-        for anchor_img_path, anchor_name in zip(self.img_paths, self.targets):
-            positive_img_path = self._get_positive_img_path(anchor_name, anchor_img_path, random_state)
-            negative_img_path = self._get_negative_img_path(anchor_name, random_state)
-            triplets.append((anchor_img_path, positive_img_path, negative_img_path))
-
-        return triplets
 
 
 def get_train_val_split(wandb_config, image_paths, labels):
@@ -152,7 +164,7 @@ def _debug():
     from tqdm.autonotebook import tqdm
 
     config = utils.get_config()
-    wandb_config = utils.load_config('clip.yml')
+    wandb_config = utils.load_config('vit.yml')
     val_dataset = make_val_triplet_dataset(config, wandb_config)
     train_dataset = make_train_triplet_dataset(config, wandb_config)
 

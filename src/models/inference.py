@@ -1,11 +1,12 @@
 import os
-from typing_extensions import Self
-from tqdm.autonotebook import tqdm
 
 import torch
 import torch.multiprocessing as mp
 from torch.utils.data import DataLoader, Subset
 import wandb.apis.public as wandb_api
+
+from tqdm.autonotebook import tqdm
+from typing_extensions import Self
 
 import src.data.datasets.inference_dataset as inf_data
 
@@ -25,8 +26,9 @@ def load_lightning_model(config, wandb_run, map_location):
 
     path_checkpoint = os.path.join(config['path']['models'], f'{wandb_run.name}-{wandb_run.id}.ckpt')
     path_checkpoint = utils.get_notebooks_path(path_checkpoint)
-    lightning = module_lightning.RefConLightning.load_from_checkpoint(path_checkpoint, map_location=map_location, **kargs)
-    
+    lightning = module_lightning.RefConLightning.load_from_checkpoint(path_checkpoint, map_location=map_location,
+                                                                      **kwargs)
+
     return lightning
 
 
@@ -42,19 +44,19 @@ class InferenceModel(torch.nn.Module):
         
     @classmethod
     def load_from_wandb_run(
-        cls,
-        config: dict,
-        wandb_run: wandb_api.Run | utils.RunDemo,
-        map_location) -> Self:
+            cls,
+            config: dict,
+            wandb_run: wandb_api.Run | utils.RunDemo,
+            map_location) -> Self:
         model = cls._load_model(config, wandb_run, map_location)
         self = cls(wandb_run.config['model_id'], model)
         
         return self
-    
+
     @staticmethod
     def _load_model(config, wandb_run, map_location):
         lightning = load_lightning_model(config, wandb_run, map_location)
-        
+
         return lightning.model
 
     @torch.inference_mode
@@ -73,9 +75,15 @@ class InferenceModel(torch.nn.Module):
 
     def _dinov2_forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
         return self.model(pixel_values)['pooler_output']
-    
-    def _vit_forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
+
+    def _vit_torchvision_forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
         return self.model(pixel_values)
+
+    def _vit_transformers_forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
+        return self.model(pixel_values)['pooler_output']
+
+    def __call__(self, images: list[Image.Image] | Image.Image) -> torch.Tensor:
+        return self.forward(images)
 
 
 class EmbeddingsBuilder:
@@ -131,9 +139,10 @@ class EmbeddingsBuilder:
 def _debug():
     config = utils.get_config()
     wandb_run = utils.get_run('96t0rkbl')
-    embeddings_builder = EmbeddingsBuilder(device=[1, 2])
-    dataset = inf_data.make_submission_corpus_inference_dataset(config, wandb_run.config)
-    embeddings, labels = embeddings_builder.build_embeddings(config, wandb_run, dataset)
+    model = InferenceModel.load_from_wandb_run(config, wandb_run, 'cpu')
+    embeddings_builder = EmbeddingsBuilder(device=0, return_names=True)
+    folder_path = os.path.join(config['path']['data'], 'raw', 'train')
+    embeddings_builder.build_embeddings(model=model, folder_path=folder_path)
 
     return
 

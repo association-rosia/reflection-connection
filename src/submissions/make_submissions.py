@@ -2,6 +2,7 @@ import json
 import os
 
 import numpy as np
+
 from src import utils
 import src.data.datasets.inference_dataset as inf_data
 from src.models.retriever import FaissRetriever
@@ -23,7 +24,7 @@ def main():
     retriever.add_to_index(corpus_embeddings, labels=corpus_names)
     distances, matched_labels = retriever.query(query_embeddings, k=3)
     confidence_scores = dist_to_conf(distances)
-    
+
     # Create submission file
     result_builder = ResultBuilder(config['path']['submissions'], k=3)
     result_builder(
@@ -75,15 +76,15 @@ class ResultBuilder:
             result_x = [{'label': labels[j], self.score_mode: float(confidence[j])} for j in range(0, self.k)]
     
             self.results.update({x: result_x})
-        
+
         return self
-    
+
     def to_json(self, json_name: str = 'results') -> None:
-        
+
         path = os.path.join(self.path, f'{json_name}.json')
         with open(path, 'w+') as f:
             json.dump(self.results, f)
-    
+
     def __call__(self,
               query_image_labels, 
               matched_labels,   
