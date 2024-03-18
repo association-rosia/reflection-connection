@@ -32,9 +32,9 @@ class RefConLightning(pl.LightningModule):
         self.criterion = make_triplet_criterion(self.wandb_config)
 
     def forward(self, anchors, positives, negatives):
-        anchors_embed = self.model(pixel_values=anchors)['pooler_output']
-        positives_embed = self.model(pixel_values=positives)['pooler_output']
-        negatives_embed = self.model(pixel_values=negatives)['pooler_output']
+        anchors_embed = self.model(pixel_values=anchors).pooler_output
+        positives_embed = self.model(pixel_values=positives).pooler_output
+        negatives_embed = self.model(pixel_values=negatives).pooler_output
         loss = self.criterion(anchors_embed, positives_embed, negatives_embed)
 
         return loss

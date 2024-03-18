@@ -26,7 +26,7 @@ def _import_module_lightning(model_id):
 
 def load_lightning_model(config, wandb_run, map_location):
     module_lightning = _import_module_lightning(wandb_run.config['model_id'])
-    model = module_lightning.get_model(wandb_run.config)
+    model = module_lightning.get_model(config, wandb_run.config)
 
     kwargs = {
         'config': config,
@@ -92,7 +92,9 @@ class InferenceModel:
         elif 'dinov2' in self.wandb_config['model_id']:
             embeddings = self._dinov2_forward(pixel_values)
         elif 'ViT' in self.wandb_config['model_id']:
-            embeddings = self._vit_forward(pixel_values)
+            embeddings = self._vit_torchvision_forward(pixel_values)
+        elif 'vit' in self.wandb_config['model_id']:
+            embeddings = self._vit_transformers_forward(pixel_values)
 
         return embeddings.squeeze(dim=0).cpu()
 
@@ -102,8 +104,11 @@ class InferenceModel:
     def _dinov2_forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
         return self.model(pixel_values)['pooler_output']
 
-    def _vit_forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
+    def _vit_torchvision_forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
         return self.model(pixel_values)
+
+    def _vit_transformers_forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
+        return self.model(pixel_values)['pooler_output']
 
     def __call__(self, images: list[Image.Image] | Image.Image) -> torch.Tensor:
         return self.forward(images)
