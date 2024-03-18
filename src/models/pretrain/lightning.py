@@ -2,7 +2,7 @@ import torch
 from torch import nn
 import pytorch_lightning as pl
 from transformers import ViTModel
-from src.models.losses import DINOLoss, iBOTLoss
+from src.models.losses import DINOLoss, iBOTLoss, KoLeoLoss
 from torch.utils.data import DataLoader
 import src.data.datasets.pretrain_dataset as td
 from src import utils
@@ -22,6 +22,7 @@ class RefConLightning(pl.LightningModule):
 
         self.dino_loss = DINOLoss(self.wandb_config)
         self.ibot_loss = iBOTLoss(self.wandb_config)
+        self.koleo_loss = KoLeoLoss()
 
         self.freeze_teacher_params()
 
@@ -65,12 +66,16 @@ class RefConLightning(pl.LightningModule):
         ibot_loss = self.ibot_loss(ibot_student_ps, ibot_teacher_ps, batch['ibot_bool_masked_pos'])
         loss += ibot_loss
 
+        koleo_student_cls = ibot_student_ps[:, 0, :]
+        koleo_loss = self.koleo_loss(koleo_student_cls)
+        loss += 0.1 * koleo_loss
+
         self.update_teacher()
 
         self.log_dict({
             'train/dino_loss': dino_loss,
             'train/ibot_loss': ibot_loss,
-            # 'train/koleo_loss': koleo_loss,
+            'train/koleo_loss': koleo_loss,
             'train/loss': loss
         })
 
@@ -87,10 +92,14 @@ class RefConLightning(pl.LightningModule):
         ibot_loss = self.ibot_loss(ibot_student_ps, ibot_teacher_ps, batch['ibot_bool_masked_pos'])
         loss += ibot_loss
 
+        koleo_student_cls = ibot_student_ps[:, 0, :]
+        koleo_loss = self.koleo_loss(koleo_student_cls)
+        loss += 0.1 * koleo_loss
+
         self.log_dict({
             'val/dino_loss': dino_loss,
             'val/ibot_loss': ibot_loss,
-            # 'train/koleo_loss': koleo_loss,
+            'train/koleo_loss': koleo_loss,
             'val/loss': loss
         })
 

@@ -3,6 +3,17 @@ import torch.nn.functional as F
 from torch import nn
 
 
+def make_triplet_criterion(wandb_config):
+    if wandb_config['criterion'] == 'TMWDL-Euclidean':
+        return nn.TripletMarginLoss(swap=True)
+    elif wandb_config['criterion'] == 'TMWDL-Cosine':
+        return nn.TripletMarginWithDistanceLoss(
+            distance_function=lambda x, y: 1.0 - F.cosine_similarity(x, y),
+            swap=True)
+    else:
+        return nn.TripletMarginLoss(swap=True)
+
+
 class DINOLoss(nn.Module):
     def __init__(self, wandb_config):
         super().__init__()
@@ -49,19 +60,6 @@ class iBOTLoss(nn.Module):
         self.len_teacher_logits = None
         self.async_batch_center = None
 
-    # def forward(self, student: torch.Tensor, teacher: torch.Tensor, bool_masked_pos: torch.Tensor) -> torch.Tensor:
-    #     batch_size, num_patches, num_prototypes = student.shape
-    #
-    #     false_tensor = torch.zeros((batch_size, 1), dtype=torch.bool, device=bool_masked_pos.device)
-    #     bool_masked_pos = torch.cat([false_tensor, bool_masked_pos], dim=1).unsqueeze(-1)
-    #
-    #     masked_student = torch.masked_select(student, bool_masked_pos).view(-1, num_prototypes)
-    #     masked_teacher = torch.masked_select(teacher, bool_masked_pos).view(-1, num_prototypes)
-    #
-    #     loss = -(masked_teacher * torch.log(masked_student)).sum(dim=1).mean()
-    #
-    #     return loss
-
     def forward(self, student: torch.Tensor, teacher: torch.Tensor, bool_masked_pos: torch.Tensor) -> torch.Tensor:
         loss = torch.sum(teacher[:, 1:] * F.log_softmax(student[:, 1:], dim=-1), dim=-1)
         loss = torch.sum(loss * bool_masked_pos.float(), dim=-1) / bool_masked_pos.sum(dim=-1).clamp(min=1.0)
@@ -92,13 +90,25 @@ class iBOTLoss(nn.Module):
             self.updated = True
 
 
-def make_triplet_criterion(wandb_config):
-    if wandb_config['criterion'] == 'TMWDL-Euclidean':
-        return nn.TripletMarginLoss(swap=True)
-    elif wandb_config['criterion'] == 'TMWDL-Cosine':
-        return nn.TripletMarginWithDistanceLoss(
-            distance_function=lambda x, y: 1.0 - F.cosine_similarity(x, y),
-            swap=True
-        )
-    else:
-        return nn.TripletMarginLoss(swap=True)
+class KoLeoLoss(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.pairwise_distance = nn.PairwiseDistance(p=2, eps=1e-8)
+
+    @staticmethod
+    def _pairwise_nearest_neighbors(features):
+        dot_products = torch.mm(features, features.t())
+        n = features.size(0)
+        dot_products.view(-1)[::n + 1] = -1
+        _, nearest_neighbors = torch.max(dot_products, dim=1)
+
+        return nearest_neighbors
+
+    def forward(self, features, eps=1e-8):
+        with torch.cuda.amp.autocast(enabled=False):
+            normalized_features = F.normalize(features, p=2, dim=-1, eps=eps)
+            nearest_neighbors = self._pairwise_nearest_neighbors(normalized_features)
+            distances = self.pairwise_distance(normalized_features, normalized_features[nearest_neighbors])
+            loss = - torch.log(distances + eps).mean()
+
+        return loss
