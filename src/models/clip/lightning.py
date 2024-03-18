@@ -22,7 +22,7 @@ class RefConLightning(pl.LightningModule):
             wandb_config: dict,
             model: CLIPVisionModelWithProjection,
             *args: Any,
-            **kargs: Any
+            **kwargs: Any
     ):
         super(RefConLightning, self).__init__()
         self.config = config
@@ -102,13 +102,13 @@ def _debug():
     wandb_config = utils.init_wandb('clip.yml')
     model = get_model(wandb_config)
 
-    kargs = {
+    kwargs = {
         'config': config,
         'wandb_config': wandb_config,
         'model': model,
     }
 
-    lightning = RefConLightning(**kargs)
+    lightning = RefConLightning(**kwargs)
 
     return
 

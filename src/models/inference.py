@@ -19,14 +19,16 @@ def _import_module_lightning(model_id):
     elif 'dinov2' in model_id:
         return import_module('src.models.dinov2.lightning')
     elif 'ViT' in model_id:
-        return import_module('src.models.vit.lightning')
+        return import_module('src.models.vit.torchvision.lightning')
+    elif 'vit' in model_id:
+        return import_module('src.models.vit.transformers.lightning')
 
 
 def load_lightning_model(config, wandb_run, map_location):
     module_lightning = _import_module_lightning(wandb_run.config['model_id'])
     model = module_lightning.get_model(wandb_run.config)
 
-    kargs = {
+    kwargs = {
         'config': config,
         'wandb_config': wandb_run.config,
         'model': model,
@@ -35,7 +37,7 @@ def load_lightning_model(config, wandb_run, map_location):
     path_checkpoint = os.path.join(config['path']['models'], f'{wandb_run.name}-{wandb_run.id}.ckpt')
     path_checkpoint = utils.get_notebooks_path(path_checkpoint)
     lightning = module_lightning.RefConLightning.load_from_checkpoint(path_checkpoint, map_location=map_location,
-                                                                      **kargs)
+                                                                      **kwargs)
 
     return lightning
 
@@ -182,7 +184,7 @@ class EmbeddingsBuilder:
 
 def _debug():
     config = utils.get_config()
-    wandb_run = utils.get_run('96t0rkbl')
+    wandb_run = utils.get_run('qlynkj89')
     model = InferenceModel.load_from_wandb_run(config, wandb_run, 'cpu')
     embeddings_builder = EmbeddingsBuilder(device=0, return_names=True)
     folder_path = os.path.join(config['path']['data'], 'raw', 'train')

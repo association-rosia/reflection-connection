@@ -8,7 +8,7 @@ import os
 import torch
 import wandb
 
-import src.models.vit.torchvision.lightning as vit_l
+import src.models.vit.torchvision.lightning as vit_torchvision_l
 from src import utils
 from src.models import utils as mutils
 
@@ -26,19 +26,19 @@ def main():
 
 
 def get_lightning(config, wandb_config, checkpoint=None):
-    model = vit_l.get_model(wandb_config)
+    model = vit_torchvision_l.get_model(wandb_config)
 
-    kargs = {
+    kwargs = {
         'config': config,
         'wandb_config': wandb_config,
         'model': model
     }
 
     if checkpoint is None:
-        lightning = vit_l.RefConLightning(**kargs)
+        lightning = vit_torchvision_l.RefConLightning(**kwargs)
     else:
         path_checkpoint = os.path.join(config['path']['models'], checkpoint)
-        lightning = vit_l.RefConLightning.load_from_checkpoint(path_checkpoint, **kargs)
+        lightning = vit_torchvision_l.RefConLightning.load_from_checkpoint(path_checkpoint, **kwargs)
 
     return lightning
 

@@ -26,16 +26,16 @@ def main():
 
 
 def get_lightning(config, wandb_config, checkpoint=None):
-    kargs = {
+    kwargs = {
         'config': config,
         'wandb_config': wandb_config
     }
 
     if checkpoint is None:
-        lightning = pretrain_l.RefConLightning(**kargs)
+        lightning = pretrain_l.RefConLightning(**kwargs)
     else:
         path_checkpoint = os.path.join(config['path']['models'], checkpoint)
-        lightning = pretrain_l.RefConLightning.load_from_checkpoint(path_checkpoint, **kargs)
+        lightning = pretrain_l.RefConLightning.load_from_checkpoint(path_checkpoint, **kwargs)
 
     return lightning
 

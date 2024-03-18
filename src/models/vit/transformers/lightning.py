@@ -10,8 +10,10 @@ from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 from typing import Any
 
+from transformers import ViTModel
+import src.models.pretrain.lightning as pretrain_l
+
 import torch
-from torchvision.models import VisionTransformer, vit_b_16, vit_l_16
 
 import src.data.datasets.triplet_dataset as td
 from src.models.losses import make_triplet_criterion
@@ -23,7 +25,7 @@ class RefConLightning(pl.LightningModule):
             self,
             config: dict,
             wandb_config: dict,
-            model: VisionTransformer,
+            model: ViTModel,
             *args: Any,
             **kwargs: Any
     ):
@@ -90,27 +92,18 @@ class RefConLightning(pl.LightningModule):
         return dataloader
 
 
-def get_model(wandb_config) -> VisionTransformer:
-    model_id = wandb_config['model_id']
-
-    if 'ViT_B_16' in model_id:
-        model = vit_b_16(pretrained=False)
-    elif 'ViT_L_16' in model_id:
-        model = vit_l_16(pretrained=False)
-    else:
-        ValueError(f'Unknown model_id: {model_id}')
-
-    weights_path = os.path.join('models', f'{model_id}.pth')
-    weights = torch.load(weights_path)
-    model.load_state_dict(weights)
+def get_model(config, wandb_config) -> ViTModel:
+    kwargs = {'config': config, 'wandb_config': utils.init_wandb('pretrain.yml')}
+    path_checkpoint = os.path.join(config['path']['models'], f'{wandb_config["checkpoint"]}.ckpt')
+    lightning = pretrain_l.RefConLightning.load_from_checkpoint(path_checkpoint, **kwargs)
 
     return model
 
 
 def _debug():
     config = utils.get_config()
-    wandb_config = utils.init_wandb('vit.yml')
-    model = get_model(wandb_config)
+    wandb_config = utils.init_wandb('vit_transformers.yml')
+    model = get_model(config, wandb_config)
 
     kwargs = {
         'config': config,
