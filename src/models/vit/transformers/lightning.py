@@ -10,8 +10,8 @@ from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 from typing import Any
 
-import torch
-from torchvision.models import VisionTransformer, vit_b_16, vit_l_16
+from transformers import ViTModel
+import src.models.pretrain.lightning as pretrain_l
 
 import src.data.datasets.triplet_dataset as td
 from src.models.losses import make_triplet_criterion
@@ -23,9 +23,9 @@ class RefConLightning(pl.LightningModule):
             self,
             config: dict,
             wandb_config: dict,
-            model: VisionTransformer,
+            model: ViTModel,
             *args: Any,
-            **kargs: Any
+            **kwargs: Any
     ):
         super(RefConLightning, self).__init__()
         self.config = config
@@ -34,9 +34,9 @@ class RefConLightning(pl.LightningModule):
         self.criterion = make_triplet_criterion(self.wandb_config)
 
     def forward(self, anchors, positives, negatives):
-        anchors_embed = self.model(anchors)
-        positives_embed = self.model(positives)
-        negatives_embed = self.model(negatives)
+        anchors_embed = self.model(pixel_values=anchors).pooler_output
+        positives_embed = self.model(pixel_values=positives).pooler_output
+        negatives_embed = self.model(pixel_values=negatives).pooler_output
         loss = self.criterion(anchors_embed, positives_embed, negatives_embed)
 
         return loss
@@ -90,35 +90,27 @@ class RefConLightning(pl.LightningModule):
         return dataloader
 
 
-def get_model(wandb_config) -> VisionTransformer:
-    model_id = wandb_config['model_id']
-
-    if 'ViT_B_16' in model_id:
-        model = vit_b_16(pretrained=False)
-    elif 'ViT_L_16' in model_id:
-        model = vit_l_16(pretrained=False)
-    else:
-        ValueError(f'Unknown model_id: {model_id}')
-
-    weights_path = os.path.join('models', f'{model_id}.pth')
-    weights = torch.load(weights_path)
-    model.load_state_dict(weights)
+def get_model(config, wandb_config) -> ViTModel:
+    kwargs = {'config': config, 'wandb_config': utils.load_config('pretrain.yml')}
+    path_checkpoint = os.path.join(config['path']['models'], f'{wandb_config["checkpoint"]}.ckpt')
+    lightning = pretrain_l.RefConLightning.load_from_checkpoint(path_checkpoint, **kwargs)
+    model = lightning.student_vit
 
     return model
 
 
 def _debug():
     config = utils.get_config()
-    wandb_config = utils.init_wandb('vit.yml')
-    model = get_model(wandb_config)
+    wandb_config = utils.init_wandb('vit_transformers.yml')
+    model = get_model(config, wandb_config)
 
-    kargs = {
+    kwargs = {
         'config': config,
         'wandb_config': wandb_config,
         'model': model,
     }
 
-    lightning = RefConLightning(**kargs)
+    lightning = RefConLightning(**kwargs)
 
     return
 

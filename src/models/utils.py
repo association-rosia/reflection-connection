@@ -4,7 +4,7 @@ import pytorch_lightning as pl
 import wandb
 
 
-def get_trainer(config):
+def get_trainer(config, wandb_config):
     os.makedirs(config['path']['models'], exist_ok=True)
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
         save_top_k=1,
@@ -33,13 +33,24 @@ def get_trainer(config):
             limit_train_batches=5,
             limit_val_batches=5
         )
+    elif len(wandb.config.devices) > 1:
+        trainer = pl.Trainer(
+            devices=wandb.config.devices,
+            max_epochs=wandb.config.max_epochs,
+            logger=pl.loggers.WandbLogger(),
+            callbacks=[checkpoint_callback],
+            precision='16-mixed',
+            strategy='ddp_find_unused_parameters_true',
+            val_check_interval=wandb_config['val_check_interval']
+        )
     else:
         trainer = pl.Trainer(
-            devices=1,
+            devices=wandb.config.devices,
             max_epochs=wandb.config.max_epochs,
             logger=pl.loggers.WandbLogger(),
             callbacks=[checkpoint_callback, early_stopping_callback],
-            precision='16-mixed'
+            precision='16-mixed',
+            val_check_interval=wandb_config['val_check_interval']
         )
 
     return trainer
