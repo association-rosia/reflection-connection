@@ -4,7 +4,7 @@ random_state: 42
 max_epochs: 25
 criterion: 'TMWDL-Cosine'
 
-contrast_factor: 25
+contrast_factor: 10
 size: 256
 crop_size: 224
 exclude_anchor: [ 'Boring' ]

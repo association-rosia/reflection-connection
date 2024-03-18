@@ -28,9 +28,7 @@ class RefConLightning(pl.LightningModule):
     def dino_forward(self, batch, set):
         student_outputs = self.student_vit(pixel_values=batch['dino_student_inputs'])
         teacher_outputs = self.teacher_vit(pixel_values=batch['dino_teacher_inputs'])
-
-        dino_student_logits = self.student_head(student_outputs.last_hidden_state[:, 0])
-        dino_student_ps = torch.softmax(dino_student_logits, dim=-1)
+        dino_student_ps = self.student_head(student_outputs.last_hidden_state[:, 0])
 
         with torch.no_grad():
             dino_teacher_logits = self.teacher_head(teacher_outputs.last_hidden_state[:, 0])
@@ -45,9 +43,7 @@ class RefConLightning(pl.LightningModule):
         bool_masked_pos = batch['ibot_bool_masked_pos']
         student_outputs = self.student_vit(pixel_values=batch['ibot_inputs'], bool_masked_pos=bool_masked_pos)
         teacher_outputs = self.teacher_vit(pixel_values=batch['ibot_inputs'])
-
-        ibot_student_logits = self.student_head(student_outputs.last_hidden_state)
-        ibot_student_ps = torch.softmax(ibot_student_logits, dim=-1)
+        ibot_student_ps = self.student_head(student_outputs.last_hidden_state)
 
         with torch.no_grad():
             ibot_teacher_logits = self.teacher_head(teacher_outputs.last_hidden_state)

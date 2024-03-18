@@ -1,5 +1,3 @@
-import sys
-
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -15,10 +13,7 @@ class DINOLoss(nn.Module):
         self.async_batch_center = None
 
     def forward(self, student: torch.Tensor, teacher: torch.Tensor) -> torch.Tensor:
-        loss = teacher * torch.log(student)
-        loss = - loss.sum(dim=1).mean()
-
-        return loss
+        return - (teacher * F.log_softmax(student, dim=-1)).sum(dim=1).mean()
 
     @torch.no_grad()
     def softmax_center(self, teacher_logits, teacher_temp=0.07):
@@ -54,18 +49,24 @@ class iBOTLoss(nn.Module):
         self.len_teacher_logits = None
         self.async_batch_center = None
 
+    # def forward(self, student: torch.Tensor, teacher: torch.Tensor, bool_masked_pos: torch.Tensor) -> torch.Tensor:
+    #     batch_size, num_patches, num_prototypes = student.shape
+    #
+    #     false_tensor = torch.zeros((batch_size, 1), dtype=torch.bool, device=bool_masked_pos.device)
+    #     bool_masked_pos = torch.cat([false_tensor, bool_masked_pos], dim=1).unsqueeze(-1)
+    #
+    #     masked_student = torch.masked_select(student, bool_masked_pos).view(-1, num_prototypes)
+    #     masked_teacher = torch.masked_select(teacher, bool_masked_pos).view(-1, num_prototypes)
+    #
+    #     loss = -(masked_teacher * torch.log(masked_student)).sum(dim=1).mean()
+    #
+    #     return loss
+
     def forward(self, student: torch.Tensor, teacher: torch.Tensor, bool_masked_pos: torch.Tensor) -> torch.Tensor:
-        batch_size, num_patches, num_prototypes = student.shape
+        loss = torch.sum(teacher[:, 1:] * F.log_softmax(student[:, 1:], dim=-1), dim=-1)
+        loss = torch.sum(loss * bool_masked_pos.float(), dim=-1) / bool_masked_pos.sum(dim=-1).clamp(min=1.0)
 
-        false_tensor = torch.zeros((batch_size, 1), dtype=torch.bool, device=bool_masked_pos.device)
-        bool_masked_pos = torch.cat([false_tensor, bool_masked_pos], dim=1).unsqueeze(-1)
-
-        masked_student = torch.masked_select(student, bool_masked_pos).view(-1, num_prototypes)
-        masked_teacher = torch.masked_select(teacher, bool_masked_pos).view(-1, num_prototypes)
-
-        loss = -(masked_teacher * torch.log(masked_student)).sum(dim=1).mean()
-
-        return loss
+        return - loss.mean()
 
     def softmax_center(self, teacher_logits, teacher_temp=0.07):
         self.apply_center_update()
