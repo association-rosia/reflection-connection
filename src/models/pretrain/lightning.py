@@ -59,15 +59,15 @@ class RefConLightning(pl.LightningModule):
         return ibot_student_ps, ibot_teacher_ps  # iBOT prototype scores
 
     def training_step(self, batch, batch_idx):
-        train_loss = 0
+        loss = 0
 
         dino_student_ps, dino_teacher_ps = self.dino_forward(batch, set='train')
         dino_loss = self.dino_loss(dino_student_ps, dino_teacher_ps)
-        train_loss += dino_loss
+        loss += dino_loss
 
         ibot_student_ps, ibot_teacher_ps = self.ibot_forward(batch, set='train')
         ibot_loss = self.ibot_loss(ibot_student_ps, ibot_teacher_ps, batch['ibot_bool_masked_pos'])
-        train_loss += ibot_loss
+        loss += ibot_loss
 
         self.update_teacher()
 
@@ -75,30 +75,30 @@ class RefConLightning(pl.LightningModule):
             'train/dino_loss': dino_loss,
             'train/ibot_loss': ibot_loss,
             # 'train/koleo_loss': koleo_loss,
-            'train/loss': train_loss
+            'train/loss': loss
         })
 
-        return train_loss
+        return loss
 
     def validation_step(self, batch, batch_idx):
-        val_loss = 0
+        loss = 0
 
         dino_student_ps, dino_teacher_ps = self.dino_forward(batch, set='val')
         dino_loss = self.dino_loss(dino_student_ps, dino_teacher_ps)
-        val_loss += dino_loss
+        loss += dino_loss
 
         ibot_student_ps, ibot_teacher_ps = self.ibot_forward(batch, set='val')
         ibot_loss = self.ibot_loss(ibot_student_ps, ibot_teacher_ps, batch['ibot_bool_masked_pos'])
-        val_loss += ibot_loss
+        loss += ibot_loss
 
         self.log_dict({
             'val/dino_loss': dino_loss,
             'val/ibot_loss': ibot_loss,
             # 'train/koleo_loss': koleo_loss,
-            'val/loss': val_loss
+            'val/loss': loss
         })
 
-        return val_loss
+        return loss
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.student_vit.parameters(), lr=self.wandb_config['lr'])

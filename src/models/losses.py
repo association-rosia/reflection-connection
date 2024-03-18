@@ -15,7 +15,7 @@ class DINOLoss(nn.Module):
         self.async_batch_center = None
 
     def forward(self, input: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        loss = input * torch.log(target)
+        loss = target * torch.log(input)
         loss = - loss.sum(dim=1).mean()
 
         return loss
@@ -61,7 +61,7 @@ class iBOTLoss(nn.Module):
         bool_masked_pos = torch.cat([expanded_false_tensor, bool_masked_pos], dim=1)
         masked_input = input * bool_masked_pos.unsqueeze(-1)
         masked_target = target * bool_masked_pos.unsqueeze(-1)
-        loss_patch = masked_input * torch.log(masked_target + 1e-8)
+        loss_patch = masked_target * torch.log(masked_input + 1e-8)
         loss_patch_sum = loss_patch.sum(dim=2)
         loss_per_batch = loss_patch_sum.sum(dim=1) / bool_masked_pos.sum(dim=1)
         loss = - loss_per_batch.mean()
