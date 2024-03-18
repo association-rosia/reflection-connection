@@ -56,15 +56,16 @@ class iBOTLoss(nn.Module):
 
     def forward(self, input: torch.Tensor, target: torch.Tensor, bool_masked_pos: torch.Tensor) -> torch.Tensor:
         batch_size, num_patches, _ = input.shape
-        false_tensor = torch.tensor([False], dtype=torch.bool, device=bool_masked_pos.device)
-        expanded_false_tensor = false_tensor.unsqueeze(0).expand(batch_size, -1)
-        bool_masked_pos = torch.cat([expanded_false_tensor, bool_masked_pos], dim=1)
-        masked_input = input * bool_masked_pos.unsqueeze(-1)
-        masked_target = target * bool_masked_pos.unsqueeze(-1)
-        loss_patch = masked_target * torch.log(masked_input + 1e-8)
-        loss_patch_sum = loss_patch.sum(dim=2)
-        loss_per_batch = loss_patch_sum.sum(dim=1) / bool_masked_pos.sum(dim=1)
-        loss = - loss_per_batch.mean()
+
+        false_tensor = torch.zeros((batch_size, 1), dtype=torch.bool, device=bool_masked_pos.device)
+        bool_masked_pos = torch.cat([false_tensor, bool_masked_pos], dim=1)
+        input = input * bool_masked_pos.unsqueeze(-1)
+        target = target * bool_masked_pos.unsqueeze(-1)
+
+        loss = target * torch.log(input)
+        loss = torch.nan_to_num(loss)
+        loss = loss.sum(dim=[1, 2]) / bool_masked_pos.sum(dim=1)
+        loss = - loss.mean()
 
         return loss
 
