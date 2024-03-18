@@ -14,8 +14,8 @@ class DINOLoss(nn.Module):
         self.len_teacher_logits = None
         self.async_batch_center = None
 
-    def forward(self, input: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        loss = target * torch.log(input)
+    def forward(self, student: torch.Tensor, teacher: torch.Tensor) -> torch.Tensor:
+        loss = teacher * torch.log(student)
         loss = - loss.sum(dim=1).mean()
 
         return loss
@@ -54,18 +54,16 @@ class iBOTLoss(nn.Module):
         self.len_teacher_logits = None
         self.async_batch_center = None
 
-    def forward(self, input: torch.Tensor, target: torch.Tensor, bool_masked_pos: torch.Tensor) -> torch.Tensor:
-        batch_size, num_patches, _ = input.shape
+    def forward(self, student: torch.Tensor, teacher: torch.Tensor, bool_masked_pos: torch.Tensor) -> torch.Tensor:
+        batch_size, num_patches, num_prototypes = student.shape
 
         false_tensor = torch.zeros((batch_size, 1), dtype=torch.bool, device=bool_masked_pos.device)
-        bool_masked_pos = torch.cat([false_tensor, bool_masked_pos], dim=1)
-        input = input * bool_masked_pos.unsqueeze(-1)
-        target = target * bool_masked_pos.unsqueeze(-1)
+        bool_masked_pos = torch.cat([false_tensor, bool_masked_pos], dim=1).unsqueeze(-1)
 
-        loss = target * torch.log(input)
-        loss = torch.nan_to_num(loss)
-        loss = loss.sum(dim=[1, 2]) / bool_masked_pos.sum(dim=1)
-        loss = - loss.mean()
+        masked_student = torch.masked_select(student, bool_masked_pos).view(-1, num_prototypes)
+        masked_teacher = torch.masked_select(teacher, bool_masked_pos).view(-1, num_prototypes)
+
+        loss = -(masked_teacher * torch.log(masked_student)).sum(dim=1).mean()
 
         return loss
 
