@@ -3,19 +3,20 @@ import os
 
 import numpy as np
 from src import utils
+import src.data.datasets.inference_dataset as inf_data
 from src.models.retriever import FaissRetriever
-from src.models.inference import InferenceModel, EmbeddingsBuilder
+from src.models.inference import EmbeddingsBuilder
 
 
 def main():
     config = utils.get_config()
     wandb_run = utils.get_run('tqwb6tru')
-    model = InferenceModel.load_from_wandb_run(config, wandb_run, 'cpu')
-    embeddings_builder = EmbeddingsBuilder(device=0, return_names=True)
-    query_folder_path = os.path.join(config['path']['data'], 'raw', 'test', 'query')
-    corpus_folder_path = os.path.join(config['path']['data'], 'raw', 'test', 'image_corpus')
-    corpus_embeddings, corpus_names = embeddings_builder.build_embeddings(model=model, folder_path=corpus_folder_path, return_names=True)
-    query_embeddings, query_names = embeddings_builder.build_embeddings(model=model, folder_path=query_folder_path, return_names=True)
+    embeddings_builder = EmbeddingsBuilder(devices=0)
+    
+    corpus_dataset = inf_data.make_submission_corpus_inference_dataset(config, wandb_run)
+    corpus_embeddings, corpus_names = embeddings_builder.build_embeddings(config, wandb_run, dataset=corpus_dataset)
+    query_dataset = inf_data.make_submission_query_inference_dataset(config, wandb_run)
+    query_embeddings, query_names = embeddings_builder.build_embeddings(config, wandb_run, dataset=query_dataset)
     
     metric = utils.get_metric(wandb_run.config)
     retriever = FaissRetriever(embeddings_size=corpus_embeddings.shape[1], metric=metric)
