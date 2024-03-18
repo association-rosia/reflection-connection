@@ -13,8 +13,6 @@ from typing import Any
 from transformers import ViTModel
 import src.models.pretrain.lightning as pretrain_l
 
-import torch
-
 import src.data.datasets.triplet_dataset as td
 from src.models.losses import make_triplet_criterion
 from src import utils
@@ -93,9 +91,10 @@ class RefConLightning(pl.LightningModule):
 
 
 def get_model(config, wandb_config) -> ViTModel:
-    kwargs = {'config': config, 'wandb_config': utils.init_wandb('pretrain.yml')}
+    kwargs = {'config': config, 'wandb_config': utils.load_config('pretrain.yml')}
     path_checkpoint = os.path.join(config['path']['models'], f'{wandb_config["checkpoint"]}.ckpt')
     lightning = pretrain_l.RefConLightning.load_from_checkpoint(path_checkpoint, **kwargs)
+    model = lightning.student_vit
 
     return model
 
