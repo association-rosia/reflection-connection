@@ -2,18 +2,21 @@ import os
 
 import pytorch_lightning as pl
 import wandb
-import src.models.vit.lightning as vit_l
+import src.models.vit.torchvision.lightning as vit_torchvision
+import src.models.vit.transformers.lightning as vit_transformers
 import src.models.clip.lightning as clip
 import src.models.dinov2.lightning as dinov2
 
 
-def get_lightning_library(wandb_config):
-    if 'clip' in wandb_config['model_id']:
+def get_lightning_library(model_id):
+    if 'clip' in model_id:
         return clip
-    elif 'dinov2' in wandb_config['model_id']:
+    elif 'dinov2' in model_id:
         return dinov2
-    elif 'ViT' in wandb_config['model_id']:
-        return vit_l
+    elif 'ViT' in model_id:
+        return vit_torchvision
+    elif 'vit' in model_id:
+        return vit_transformers
     else:
         raise NotImplementedError()
 

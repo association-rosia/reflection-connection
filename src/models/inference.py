@@ -5,6 +5,7 @@ import torch.multiprocessing as mp
 from torch.utils.data import DataLoader, Subset
 import wandb.apis.public as wandb_api
 
+
 from tqdm.autonotebook import tqdm
 from typing_extensions import Self
 
@@ -14,11 +15,11 @@ import src.models.utils as mutils
 from src import utils
  
 
-def load_lightning_model(config, wandb_run, map_location):
-    module_lightning = mutils.get_lightning_library(wandb_run.config)
+def load_lightning_model(config: dict, wandb_run: wandb_api.Run | utils.RunDemo, map_location):
+    module_lightning = mutils.get_lightning_library(wandb_run.config['model_id'])
     model = module_lightning.get_model(wandb_run.config)
     
-    kargs = {
+    kwargs = {
         'config': config,
         'wandb_config': wandb_run.config,
         'model': model,
@@ -66,7 +67,9 @@ class InferenceModel(torch.nn.Module):
         elif 'dinov2' in self.model_id:
             embeddings = self._dinov2_forward(pixel_values)
         elif 'ViT' in self.model_id:
-            embeddings = self._vit_forward(pixel_values)
+            embeddings = self._vit_torchvision_forward(pixel_values)
+        elif 'vit' in self.model_id:
+            embeddings = self._vit_transformers_forward(pixel_values)
         
         return embeddings
     
@@ -82,15 +85,13 @@ class InferenceModel(torch.nn.Module):
     def _vit_transformers_forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
         return self.model(pixel_values)['pooler_output']
 
-    def __call__(self, images: list[Image.Image] | Image.Image) -> torch.Tensor:
-        return self.forward(images)
-
 
 class EmbeddingsBuilder:
     def __init__(self,
                  devices: int | str | list[int] = 0,
                  inference_dtype = torch.float16,
                  batch_size: int = 16,
+                 num_workers: int = 16,
                  ) -> None:
         if isinstance(devices, int):
             self.devices = [f'cuda:{devices}']
@@ -100,11 +101,12 @@ class EmbeddingsBuilder:
             self.devices = [devices]
         self.inference_dtype = inference_dtype
         self.batch_size = batch_size
+        self.num_workers = num_workers
 
     def inference_worker(self, config, wandb_run, device, dataset, embeddings_labels):
         model = InferenceModel.load_from_wandb_run(config, wandb_run, device)
         model = model.to(dtype=self.inference_dtype)
-        loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=16)
+        loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
         
         # Faire l'inférence avec ce DataLoader
         for _, (pixel_values, targets) in enumerate(tqdm(loader)):
@@ -119,7 +121,7 @@ class EmbeddingsBuilder:
         for rank, device in enumerate(self.devices):
             subset_indices = range(rank, len(dataset), self.devices)
             subset = Subset(dataset, indices=subset_indices)
-            p = mp.Process(target=self.inference_worker, args=(config, wandb_run, device, subset, embeddings_labels, self.batch_size))
+            p = mp.Process(target=self.inference_worker, args=(config, wandb_run, device, subset, embeddings_labels))
             p.start()
             processes.append(p)
         
