@@ -1,14 +1,14 @@
 dry: false
 
 random_state: 42
-max_epochs: 100
+max_epochs: 10
 
 crop_size: 224
 
-model_id: 'facebook/vit-mae-base'
+model_id: 'facebook/vit-mae-large'
 
 batch_size: 32
-val_check_interval: 0.1
+val_check_interval: 0.05
 
 lr: 0.0001
 

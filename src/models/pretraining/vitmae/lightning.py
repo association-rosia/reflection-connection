@@ -35,13 +35,13 @@ class RefConLightning(pl.LightningModule):
         return loss
 
     def training_step(self, batch):
-        loss = self.forward(*batch)
+        loss = self.forward(batch)
         self.log('train/loss', loss, on_epoch=True, sync_dist=True)
 
         return loss
 
     def validation_step(self, batch):
-        loss = self.forward(*batch)
+        loss = self.forward(batch)
         self.log('val/loss', loss, on_epoch=True, sync_dist=True)
 
         return loss
@@ -57,7 +57,7 @@ class RefConLightning(pl.LightningModule):
         return [optimizer], [scheduler]
 
     def train_dataloader(self):
-        dataset = vitmae_td.make_petrain_dataset(self.config, self.wandb_config)
+        dataset = vitmae_td.make_petrain_dataset(self.config, self.wandb_config, set='train')
 
         dataloader = DataLoader(
             dataset=dataset,
@@ -70,7 +70,7 @@ class RefConLightning(pl.LightningModule):
         return dataloader
 
     def val_dataloader(self):
-        dataset = vitmae_td.make_petrain_dataset(self.config, self.wandb_config)
+        dataset = vitmae_td.make_petrain_dataset(self.config, self.wandb_config, set='val')
 
         dataloader = DataLoader(
             dataset=dataset,
