@@ -8,10 +8,9 @@ from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 from typing import Any
 
-from transformers import Dinov2Model
+from transformers import ViTMAEForPreTraining
 
-import src.data.datasets.triplet_dataset as td
-from src.models.losses import make_triplet_criterion
+import src.data.datasets.vitmae as vitmae_td
 from src import utils
 
 
@@ -20,7 +19,7 @@ class RefConLightning(pl.LightningModule):
             self,
             config: dict,
             wandb_config: dict,
-            model: Dinov2Model,
+            model: ViTMAEForPreTraining,
             *args: Any,
             **kwargs: Any
     ):
@@ -29,13 +28,9 @@ class RefConLightning(pl.LightningModule):
         self.wandb_config = wandb_config
         self.model = model
 
-        self.criterion = make_triplet_criterion(self.wandb_config)
-
-    def forward(self, anchors, positives, negatives):
-        anchors_embed = self.model(pixel_values=anchors).pooler_output
-        positives_embed = self.model(pixel_values=positives).pooler_output
-        negatives_embed = self.model(pixel_values=negatives).pooler_output
-        loss = self.criterion(anchors_embed, positives_embed, negatives_embed)
+    def forward(self, inputs):
+        outputs = self.model(pixel_values=inputs)
+        loss = outputs.loss
 
         return loss
 
@@ -62,7 +57,7 @@ class RefConLightning(pl.LightningModule):
         return [optimizer], [scheduler]
 
     def train_dataloader(self):
-        dataset = td.make_train_triplet_dataset(self.config, self.wandb_config)
+        dataset = vitmae_td.make_petrain_dataset(self.config, self.wandb_config)
 
         dataloader = DataLoader(
             dataset=dataset,
@@ -75,7 +70,7 @@ class RefConLightning(pl.LightningModule):
         return dataloader
 
     def val_dataloader(self):
-        dataset = td.make_val_triplet_dataset(self.config, self.wandb_config)
+        dataset = vitmae_td.make_petrain_dataset(self.config, self.wandb_config)
 
         dataloader = DataLoader(
             dataset=dataset,
@@ -88,18 +83,15 @@ class RefConLightning(pl.LightningModule):
         return dataloader
 
 
-def get_model(wandb_config) -> Dinov2Model:
-    model = Dinov2Model.from_pretrained(
-        pretrained_model_name_or_path=wandb_config['model_id'],
-        ignore_mismatched_sizes=True
-    )
+def get_model(wandb_config) -> ViTMAEForPreTraining:
+    model = ViTMAEForPreTraining.from_pretrained(pretrained_model_name_or_path=wandb_config['model_id'])
 
     return model
 
 
 def _debug():
     config = utils.get_config()
-    wandb_config = utils.init_wandb('dinov2.yml')
+    wandb_config = utils.init_wandb('pretraining/vitmae.yml')
     model = get_model(wandb_config)
 
     kwargs = {

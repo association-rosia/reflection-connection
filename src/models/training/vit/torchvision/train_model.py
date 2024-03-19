@@ -8,7 +8,7 @@ import os
 import torch
 import wandb
 
-import src.models.training.vit.torchvision.lightning as vit_torchvision_l
+import src.models.training.vit.torchvision.lightning as vit_l
 from src import utils
 from src.models import utils as mutils
 
@@ -18,7 +18,7 @@ torch.set_float32_matmul_precision('medium')
 
 def main():
     config = utils.get_config()
-    wandb_config = utils.init_wandb('vit_torchvision.yml')
+    wandb_config = utils.init_wandb('training/vit.yml', 'torchvision')
     trainer = mutils.get_trainer(config, wandb_config)
     lightning = get_lightning(config, wandb_config)
     trainer.fit(model=lightning)
@@ -26,7 +26,7 @@ def main():
 
 
 def get_lightning(config, wandb_config, checkpoint=None):
-    model = vit_torchvision_l.get_model(wandb_config)
+    model = vit_l.get_model(wandb_config)
 
     kwargs = {
         'config': config,
@@ -35,10 +35,10 @@ def get_lightning(config, wandb_config, checkpoint=None):
     }
 
     if checkpoint is None:
-        lightning = vit_torchvision_l.RefConLightning(**kwargs)
+        lightning = vit_l.RefConLightning(**kwargs)
     else:
         path_checkpoint = os.path.join(config['path']['models'], checkpoint)
-        lightning = vit_torchvision_l.RefConLightning.load_from_checkpoint(path_checkpoint, **kwargs)
+        lightning = vit_l.RefConLightning.load_from_checkpoint(path_checkpoint, **kwargs)
 
     return lightning
 

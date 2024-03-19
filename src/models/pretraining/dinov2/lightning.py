@@ -4,7 +4,7 @@ import pytorch_lightning as pl
 from transformers import ViTModel
 from src.models.losses import DINOLoss, iBOTLoss, KoLeoLoss
 from torch.utils.data import DataLoader
-import src.data.datasets.dinov2 as dinov2_td
+import src.data.datasets.dinov2 as dinov2_d
 from src import utils
 from src.models.modules import RefConHead
 
@@ -126,7 +126,7 @@ class RefConLightning(pl.LightningModule):
             teacher_param.data = teacher_momentum * teacher_param.data + (1 - teacher_momentum) * student_param.data
 
     def train_dataloader(self):
-        dataset = dinov2_td.make_petrain_dataset(self.config, self.wandb_config, set='train')
+        dataset = dinov2_d.make_petrain_dataset(self.config, self.wandb_config, set='train')
 
         dataloader = DataLoader(
             dataset=dataset,
@@ -139,7 +139,7 @@ class RefConLightning(pl.LightningModule):
         return dataloader
 
     def val_dataloader(self):
-        dataset = dinov2_td.make_petrain_dataset(self.config, self.wandb_config, set='val')
+        dataset = dinov2_d.make_petrain_dataset(self.config, self.wandb_config, set='val')
 
         dataloader = DataLoader(
             dataset=dataset,

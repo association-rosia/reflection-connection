@@ -10,7 +10,7 @@ from typing import Any
 
 from transformers import Dinov2Model
 
-import src.data.datasets.triplet_dataset as td
+import src.data.datasets.triplet as triplet_d
 from src.models.losses import make_triplet_criterion
 from src import utils
 
@@ -62,7 +62,7 @@ class RefConLightning(pl.LightningModule):
         return [optimizer], [scheduler]
 
     def train_dataloader(self):
-        dataset = td.make_train_triplet_dataset(self.config, self.wandb_config)
+        dataset = triplet_d.make_train_triplet_dataset(self.config, self.wandb_config)
 
         dataloader = DataLoader(
             dataset=dataset,
@@ -75,7 +75,7 @@ class RefConLightning(pl.LightningModule):
         return dataloader
 
     def val_dataloader(self):
-        dataset = td.make_val_triplet_dataset(self.config, self.wandb_config)
+        dataset = triplet_d.make_val_triplet_dataset(self.config, self.wandb_config)
 
         dataloader = DataLoader(
             dataset=dataset,
