@@ -8,7 +8,7 @@ import os
 import torch
 import wandb
 
-import src.models.pretrain.lightning as pretrain_l
+import src.models.pretraining.dinov2.lightning as pretrain_l
 from src import utils
 from src.models import utils as mutils
 

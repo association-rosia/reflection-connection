@@ -10,12 +10,12 @@ from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 from typing import Any
 
-from transformers import ViTModel
-import src.models.pretrain.lightning as pretrain_l
+import src.models.pretraining.dinov2.lightning as pretrain_l
 
 import src.data.datasets.triplet_dataset as td
 from src.models.losses import make_triplet_criterion
 from src import utils
+from src.models.modules import RefConTransformersViT
 
 
 class RefConLightning(pl.LightningModule):
@@ -23,7 +23,7 @@ class RefConLightning(pl.LightningModule):
             self,
             config: dict,
             wandb_config: dict,
-            model: ViTModel,
+            model: RefConTransformersViT,
             *args: Any,
             **kwargs: Any
     ):
@@ -34,9 +34,9 @@ class RefConLightning(pl.LightningModule):
         self.criterion = make_triplet_criterion(self.wandb_config)
 
     def forward(self, anchors, positives, negatives):
-        anchors_embed = self.model(pixel_values=anchors).pooler_output
-        positives_embed = self.model(pixel_values=positives).pooler_output
-        negatives_embed = self.model(pixel_values=negatives).pooler_output
+        anchors_embed = self.model(anchors)
+        positives_embed = self.model(positives)
+        negatives_embed = self.model(negatives)
         loss = self.criterion(anchors_embed, positives_embed, negatives_embed)
 
         return loss
@@ -90,11 +90,13 @@ class RefConLightning(pl.LightningModule):
         return dataloader
 
 
-def get_model(config, wandb_config) -> ViTModel:
+def get_model(config, wandb_config) -> RefConTransformersViT:
     kwargs = {'config': config, 'wandb_config': utils.load_config('pretrain.yml')}
-    path_checkpoint = os.path.join(config['path']['models'], f'{wandb_config["checkpoint"]}.ckpt')
+    path_checkpoint = os.path.join(config['path']['models'], wandb_config['checkpoint'])
     lightning = pretrain_l.RefConLightning.load_from_checkpoint(path_checkpoint, **kwargs)
-    model = lightning.student_vit
+
+    vit = lightning.student_vit
+    model = RefConTransformersViT(vit)
 
     return model
 

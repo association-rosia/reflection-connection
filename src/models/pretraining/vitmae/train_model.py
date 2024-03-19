@@ -2,13 +2,13 @@ import warnings
 
 warnings.filterwarnings('ignore')
 
+import os
 import warnings
 
-import os
 import torch
 import wandb
 
-import src.models.vit.transformers.lightning as vit_transformers_l
+import src.models.training.dinov2.lightning as dinov2_l
 from src import utils
 from src.models import utils as mutils
 
@@ -18,7 +18,7 @@ torch.set_float32_matmul_precision('medium')
 
 def main():
     config = utils.get_config()
-    wandb_config = utils.init_wandb('vit_transformers.yml')
+    wandb_config = utils.init_wandb('dinov2.yml')
     trainer = mutils.get_trainer(config, wandb_config)
     lightning = get_lightning(config, wandb_config)
     trainer.fit(model=lightning)
@@ -26,7 +26,7 @@ def main():
 
 
 def get_lightning(config, wandb_config, checkpoint=None):
-    model = vit_transformers_l.get_model(config, wandb_config)
+    model = dinov2_l.get_model(wandb_config)
 
     kwargs = {
         'config': config,
@@ -35,10 +35,10 @@ def get_lightning(config, wandb_config, checkpoint=None):
     }
 
     if checkpoint is None:
-        lightning = vit_transformers_l.RefConLightning(**kwargs)
+        lightning = dinov2_l.RefConLightning(**kwargs)
     else:
-        path_checkpoint = os.path.join(config['path']['models'], checkpoint)
-        lightning = vit_transformers_l.RefConLightning.load_from_checkpoint(path_checkpoint, **kwargs)
+        path_checkpoint = os.path.join(config['path']['models']['root'], checkpoint)
+        lightning = dinov2_l.RefConLightning.load_from_checkpoint(path_checkpoint, **kwargs)
 
     return lightning
 

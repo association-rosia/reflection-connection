@@ -9,7 +9,7 @@ import src.data.transforms as dT
 from src import utils
 
 
-class RefCoPretrainDataset(Dataset):
+class RefConDinov2Dataset(Dataset):
 
     def __init__(self, wandb_config, images_path: list, processor: dT.RefConfProcessor):
         self.wandb_config = wandb_config
@@ -65,7 +65,7 @@ def make_petrain_dataset(config, wandb_config, set):
     images_path = get_images_path(config, set)
     processor = dT.make_pretraining_processor(config, wandb_config)
 
-    return RefCoPretrainDataset(wandb_config, images_path, processor)
+    return RefConDinov2Dataset(wandb_config, images_path, processor)
 
 
 def _debug():

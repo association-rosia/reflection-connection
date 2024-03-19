@@ -8,7 +8,7 @@ import warnings
 import torch
 import wandb
 
-import src.models.clip.lightning as clip_l
+import src.models.training.clip.lightning as clip_l
 from src import utils
 from src.models import utils as mutils
 
