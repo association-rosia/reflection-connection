@@ -1,7 +1,7 @@
 import os
 from glob import glob
-import torch
 
+import torch
 from PIL import Image
 from torch.utils.data import Dataset
 

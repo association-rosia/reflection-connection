@@ -8,8 +8,6 @@ from torch.utils.data import Dataset
 import src.data.transforms as dT
 from src import utils
 
-import matplotlib.pyplot as plt
-
 
 class RefConTripletDataset(Dataset):
     """

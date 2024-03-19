@@ -1,11 +1,11 @@
-import torch
-
 import pytorch_lightning as pl
-from transformers import ViTModel
-from src.models.losses import DINOLoss, iBOTLoss, KoLeoLoss
+import torch
 from torch.utils.data import DataLoader
+from transformers import ViTModel
+
 import src.data.datasets.dinov2 as dinov2_d
 from src import utils
+from src.models.losses import DINOLoss, iBOTLoss, KoLeoLoss
 from src.models.modules import RefConHead
 
 
