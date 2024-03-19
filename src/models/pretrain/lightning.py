@@ -68,7 +68,7 @@ class RefConLightning(pl.LightningModule):
 
         koleo_student_cls = ibot_student_ps[:, 0, :]
         koleo_loss = self.koleo_loss(koleo_student_cls)
-        loss += 0.1 * koleo_loss
+        loss += 0.2 * koleo_loss
 
         self.update_teacher()
 
@@ -99,7 +99,7 @@ class RefConLightning(pl.LightningModule):
         self.log_dict({
             'val/dino_loss': dino_loss,
             'val/ibot_loss': ibot_loss,
-            'train/koleo_loss': koleo_loss,
+            'val/koleo_loss': koleo_loss,
             'val/loss': loss
         })
 
