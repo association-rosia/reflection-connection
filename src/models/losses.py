@@ -93,22 +93,22 @@ class iBOTLoss(nn.Module):
 class KoLeoLoss(nn.Module):
     def __init__(self):
         super().__init__()
-        self.pairwise_distance = nn.PairwiseDistance(p=2, eps=1e-8)
+        self.pdist = nn.PairwiseDistance(p=2, eps=1e-8)
 
     @staticmethod
     def _pairwise_nearest_neighbors(features):
         dot_products = torch.mm(features, features.t())
-        n = features.size(0)
-        dot_products.view(-1)[::n + 1] = -1
-        _, nearest_neighbors = torch.max(dot_products, dim=1)
+        n = features.shape[0]
+        dot_products.view(-1)[::(n + 1)].fill_(-1)
+        _, i = torch.max(dot_products, dim=1)
 
-        return nearest_neighbors
+        return i
 
     def forward(self, features, eps=1e-8):
         with torch.cuda.amp.autocast(enabled=False):
             normalized_features = F.normalize(features, p=2, dim=-1, eps=eps)
             nearest_neighbors = self._pairwise_nearest_neighbors(normalized_features)
-            distances = self.pairwise_distance(normalized_features, normalized_features[nearest_neighbors])
+            distances = self.pdist(normalized_features, normalized_features[nearest_neighbors])
             loss = - torch.log(distances + eps).mean()
 
         return loss
