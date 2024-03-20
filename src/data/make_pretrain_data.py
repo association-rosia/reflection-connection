@@ -41,7 +41,9 @@ def draw_random_shape(values, counts):
 
 
 def normalize_pretrain_slice(slice):
-    return cv2.normalize(slice, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_32FC1)
+    slice = cv2.normalize(slice, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32FC1)
+
+    return slice
 
 
 def adjust_coordinates(x0, y0, h, w, max_h, max_w):
@@ -59,7 +61,7 @@ def adjust_coordinates(x0, y0, h, w, max_h, max_w):
     return x0, x1, y0, y1
 
 
-def get_tiles_coords(values, counts, num_tiles=16, max_h=1259, max_w=300):
+def get_tiles_coords(values, counts, num_tiles=4, max_h=1259, max_w=300):
     tiles_coords = []
 
     for x0 in range(0, max_h, 126):
@@ -75,12 +77,11 @@ def get_tiles_coords(values, counts, num_tiles=16, max_h=1259, max_w=300):
 
 def extract_tiles_from_slice(slice, save_volume_path, values, counts, volume_name, image_idx):
     tiles_coords = get_tiles_coords(values, counts)
-    # os.makedirs(save_volume_path, exist_ok=True)
 
     for x0, x1, y0, y1 in tiles_coords:
         tile = slice[x0:x1, y0:y1]
         tile = normalize_pretrain_slice(tile)
-        image = Image.fromarray(tile).convert('L')
+        image = Image.fromarray(tile).convert('RGB')
         save_image_path = os.path.join(save_volume_path, f'{volume_name}-{image_idx}.png')
         image.save(save_image_path)
         image_idx += 1
@@ -99,13 +100,15 @@ def extract_tiles_from_volumes(config):
 
         volume_name = volume_path.split('/')[-1].replace('.npy', '')
         volume_name = volume_name.replace('.', '').replace('_', '')
+        save_volume_path = os.path.join(save_pretrain_path, volume_name)
+        os.makedirs(save_volume_path, exist_ok=True)
 
         image_idx = 0
         for slice_idx in range(len(volume)):
             slice = volume[slice_idx, :, :].T
-            image_idx = extract_tiles_from_slice(slice, save_pretrain_path, values, counts, volume_name, image_idx)
+            image_idx = extract_tiles_from_slice(slice, save_volume_path, values, counts, volume_name, image_idx)
             slice = volume[:, slice_idx, :].T
-            image_idx = extract_tiles_from_slice(slice, save_pretrain_path, values, counts, volume_name, image_idx)
+            image_idx = extract_tiles_from_slice(slice, save_volume_path, values, counts, volume_name, image_idx)
 
 
 def init_folders(config):
