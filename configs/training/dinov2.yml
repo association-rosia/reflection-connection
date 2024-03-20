@@ -10,10 +10,11 @@ crop_size: 224
 exclude_anchor: [ 'Boring' ]
 
 model_id: 'facebook/dinov2-base'
+checkpoint: None
 
 batch_size: 24
 val_check_interval: 1.0
 
 lr: 0.000005
 
-devices: [1]
+devices: [0]

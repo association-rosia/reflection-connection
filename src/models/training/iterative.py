@@ -3,7 +3,7 @@ import json
 import numpy as np
 import multiprocessing as mp
 from src import utils
-import src.data.datasets.inference_dataset as inf_data
+import src.data.datasets.inference as inference_d
 import src.models.utils as mutils
 from src.models.retriever import FaissRetriever
 from src.models.inference import EmbeddingsBuilder
@@ -15,15 +15,13 @@ from torch.utils.data import Subset
 
 def main():
     config = utils.get_config()
-    iterative_config = utils.load_config('iterative.yml')
-    uncurated_folder = os.path.join(config['path']['data'], 'processed', 'pretrain')
+    iterative_config = utils.load_config('training/iterative.yml')
     curated_folder = os.path.join(config['path']['data'], 'raw', 'train')
     
     iterative_trainer = IterativeTrainer(
         config,
         iterative_config,
-        curated_folder,
-        uncurated_folder
+        curated_folder
     )
     
     iterative_trainer.fit()
@@ -32,12 +30,10 @@ class IterativeTrainer:
     def __init__(self,
                  config,
                  iterative_config,
-                 curated_folder,
-                 uncurated_folder) -> None:
+                 curated_folder) -> None:
         self.config = config
         self.iterative_config = iterative_config
         self.curated_folder = curated_folder
-        self.uncurated_folder = uncurated_folder
         self.path_iterative_data = os.path.join(self.config['path']['data'], 'processed', 'train')
     
     def fit(self):
@@ -56,12 +52,14 @@ class IterativeTrainer:
             iterative_data = self._create_next_iterative_dataset(wandb_run)
 
     def _train_model(self, iterative_data, wandb_dict):
-        utils.init_wandb(self.iterative_config['model_config'])
+        utils.init_wandb(self.iterative_config['model_config'], self.iterative_config['sub_config'])
         wandb.config.update({
             'iterative_data': iterative_data, 
             'curated_threshold': self.iterative_config['curated_threshold'],
             'duplicate_threshold': self.iterative_config['duplicate_threshold'],
-            'devices': self.iterative_config['devices']
+            'devices': self.iterative_config['devices'],
+            'dry': self.iterative_config['dry'],
+            'checkpoint': self.iterative_config['checkpoint'],
         }, allow_val_change=True)
         wandb_dict['value'] =  copy.deepcopy(wandb.run.id)
         trainer = mutils.get_trainer(self.config)
@@ -75,10 +73,11 @@ class IterativeTrainer:
 
     def _create_next_iterative_dataset(self, wandb_run: utils.RunDemo | wandb_api.Run):
         embeddings_builder = EmbeddingsBuilder(devices=self.iterative_config['devices'], batch_size=64, num_workers=32)
-        query_dataset = inf_data.make_iterative_query_inference_dataset(self.config, wandb_run.config)
+        query_dataset = inference_d.make_iterative_query_inference_dataset(self.config, wandb_run.config)
         query_embeddings, query_labels = embeddings_builder.build_embeddings(self.config, wandb_run, query_dataset)
-        corpus_dataset = inf_data.make_iterative_corpus_inference_dataset(self.config, wandb_run.config)
-        corpus_dataset = Subset(corpus_dataset, indices=range(1000))
+        corpus_dataset = inference_d.make_iterative_corpus_inference_dataset(self.config, wandb_run.config)
+        if wandb_run.config['dry']: 
+            corpus_dataset = Subset(corpus_dataset, indices=range(10000))
         corpus_embeddings, corpus_paths = embeddings_builder.build_embeddings(self.config, wandb_run, corpus_dataset)
         
         metric = utils.get_metric(wandb_run.config)

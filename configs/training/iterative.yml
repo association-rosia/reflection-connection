@@ -1,0 +1,14 @@
+dry: false
+
+iterations: 4
+
+images_by_iterations: 4
+curated_threshold: 0.1
+duplicate_threshold: 0
+
+model_config: 'training/vit.yml'
+sub_config: 'torchvision'
+
+checkpoint: None
+
+devices: [0]

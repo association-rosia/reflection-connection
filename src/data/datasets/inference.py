@@ -64,8 +64,8 @@ def make_iterative_corpus_inference_dataset(config, wandb_config):
     augmented_dataset = utils.load_augmented_dataset(wandb_config)
     query_paths = [image_dict['image_path'] for image_dict in augmented_dataset]
     uncurated_folder = os.path.join(config['path']['data'], 'processed', 'pretrain')
-    template_path = os.path.join(uncurated_folder, '*.png')
-    corpus_paths = glob(template_path)
+    template_path = os.path.join(uncurated_folder, '**', '*.png')
+    corpus_paths = glob(template_path, recursive=True)
     corpus_paths = list(set(corpus_paths) - set(query_paths))
     processor = dT.make_eval_processor(config, wandb_config)
     
@@ -96,20 +96,8 @@ def _debug():
     wandb_run = utils.get_run('qlynkj89')
     dataset = make_iterative_corpus_inference_dataset(config, wandb_run.config)
     dataset = make_iterative_query_inference_dataset(config, wandb_run.config)
-    # from tqdm.autonotebook import tqdm
-
-    # config = utils.get_config()
-    # wandb_config = utils.load_config('clip.yml')
-    # val_dataset = make_iterative_query_inference_dataset(config, wandb_config)
-    # train_dataset = make_iterative_corpus_inference_dataset(config, wandb_config)
-
-    # for inputs in tqdm(val_dataset):
-    #     pass
-
-    # for inputs in tqdm(train_dataset):
-    #     pass
-
-    pass
+    
+    return
 
 
 if __name__ == '__main__':

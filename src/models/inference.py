@@ -4,13 +4,11 @@ import torch
 import torch.multiprocessing as mp
 from torch.utils.data import DataLoader, Subset
 import wandb.apis.public as wandb_api
-import torchvision
-
 
 from tqdm.autonotebook import tqdm
 from typing_extensions import Self
 
-import src.data.datasets.inference_dataset as inf_data
+import src.data.datasets.inference as inference_d
 
 import src.models.utils as mutils
 from src import utils
@@ -107,7 +105,7 @@ class EmbeddingsBuilder:
                           config: dict,
                           wandb_run: wandb_api.Run | utils.RunDemo,
                           device: str,
-                          dataset: inf_data.RefConInferenceDataset,
+                          dataset: inference_d.RefConInferenceDataset,
                           embeddings_labels = None):
         
         model = InferenceModel.load_from_wandb_run(config, wandb_run, device)
@@ -151,7 +149,7 @@ class EmbeddingsBuilder:
         output.embeddings = torch.cat(embeddings)
         output.labels = labels
     
-    def build_embeddings(self, config: dict, wandb_run: wandb_api.Run | utils.RunDemo, dataset: inf_data.RefConInferenceDataset):
+    def build_embeddings(self, config: dict, wandb_run: wandb_api.Run | utils.RunDemo, dataset: inference_d.RefConInferenceDataset):
         
         if len(self.devices) > 1:
             manager = mp.Manager()
@@ -170,7 +168,7 @@ def _debug():
     config = utils.get_config()
     wandb_run = utils.get_run('omo3q9fq')
     embeddings_builder = EmbeddingsBuilder(devices=[0], batch_size=64, num_workers=32)
-    dataset = inf_data.make_iterative_query_inference_dataset(config, wandb_run.config)
+    dataset = inference_d.make_iterative_query_inference_dataset(config, wandb_run.config)
     embeddings_builder.build_embeddings(config, wandb_run, dataset)
     emb, lab = embeddings_builder.build_embeddings(config, wandb_run, dataset)
     
