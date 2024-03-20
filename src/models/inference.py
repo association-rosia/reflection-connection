@@ -15,18 +15,23 @@ from src import utils
 
 def _import_module_lightning(model_id):
     if 'clip' in model_id:
-        return import_module('src.models.clip.lightning')
+        return import_module('src.models.training.clip.lightning')
     elif 'dinov2' in model_id:
-        return import_module('src.models.dinov2.lightning')
+        return import_module('src.models.training.dinov2.lightning')
     elif 'ViT' in model_id:
-        return import_module('src.models.vit.torchvision.lightning')
+        return import_module('src.models.training.vit.torchvision.lightning')
     elif 'vit' in model_id:
-        return import_module('src.models.vit.transformers.lightning')
+        return import_module('src.models.training.vit.transformers.lightning')
 
 
 def load_lightning_model(config, wandb_run, map_location):
-    module_lightning = _import_module_lightning(wandb_run.config['model_id'])
-    model = module_lightning.get_model(config, wandb_run.config)
+    model_id = wandb_run.config['model_id']
+    module_lightning = _import_module_lightning(model_id)
+
+    if 'clip' in model_id or 'dinov2' in model_id or 'ViT' in model_id:
+        model = module_lightning.get_model(wandb_run.config)
+    else:
+        model = module_lightning.get_model(config, wandb_run.config)
 
     kwargs = {
         'config': config,
@@ -189,7 +194,7 @@ class EmbeddingsBuilder:
 
 def _debug():
     config = utils.get_config()
-    wandb_run = utils.get_run('qlynkj89')
+    wandb_run = utils.get_run('zgv4h86p')
     model = InferenceModel.load_from_wandb_run(config, wandb_run, 'cpu')
     embeddings_builder = EmbeddingsBuilder(device=0, return_names=True)
     folder_path = os.path.join(config['path']['data'], 'raw', 'train')
