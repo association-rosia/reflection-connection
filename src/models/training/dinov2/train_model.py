@@ -19,13 +19,13 @@ torch.set_float32_matmul_precision('medium')
 def main():
     config = utils.get_config()
     wandb_config = utils.init_wandb('training/dinov2.yml')
-    trainer = mutils.get_trainer(config, wandb_config)
+    trainer = mutils.get_trainer(config)
     lightning = get_lightning(config, wandb_config)
     trainer.fit(model=lightning)
     wandb.finish()
 
 
-def get_lightning(config, wandb_config, checkpoint=None):
+def get_lightning(config, wandb_config):
     model = dinov2_l.get_model(wandb_config)
 
     kwargs = {
@@ -33,7 +33,8 @@ def get_lightning(config, wandb_config, checkpoint=None):
         'wandb_config': wandb_config,
         'model': model
     }
-
+    
+    checkpoint = wandb_config.get('checkpoint', None)
     if checkpoint is None:
         lightning = dinov2_l.RefConLightning(**kwargs)
     else:

@@ -15,19 +15,13 @@ class RefConTripletDataset(Dataset):
     Test: Creates fixed triplets for testing
     """
 
-    def __init__(self,
-                 wandb_config: dict,
-                 list_class_name: list,
-                 list_img_path: list,
-                 processor: dT.RefConfProcessor,
-                 train: bool
-                 ):
+    def __init__(self, wandb_config: dict, image_paths: list, labels: list, processor: dT.RefConfProcessor, train: bool):
         self.wandb_config = wandb_config
-        self.dict_path_img = self._make_dict_path_img(list_class_name, list_img_path)
-        self.set_class_name = set(list_class_name)
+        self.dict_path_img = self._make_dict_path_img(labels, image_paths)
+        self.set_class_name = set(labels)
         self.processor = processor
         self.train = train
-        targets, img_paths = self._remove_targets(list_class_name, list_img_path)
+        targets, img_paths = self._remove_targets(labels, image_paths)
         self.img_paths = img_paths
         self.targets = targets
 
@@ -38,9 +32,9 @@ class RefConTripletDataset(Dataset):
         return len(self.targets)
 
     @staticmethod
-    def _make_dict_path_img(list_class_name, img_paths):
-        dict_path_img = {class_name: [] for class_name in set(list_class_name)}
-        for class_name, path_img in zip(list_class_name, img_paths):
+    def _make_dict_path_img(labels, img_paths):
+        dict_path_img = {class_name: [] for class_name in set(labels)}
+        for class_name, path_img in zip(labels, img_paths):
             dict_path_img[class_name].append(path_img)
 
         return {k: np.asarray(v) for k, v in dict_path_img.items()}
@@ -109,30 +103,15 @@ class RefConTripletDataset(Dataset):
         return anchor_img, positive_img, negative_img
 
 
-def get_class_path(dir_path):
-    list_class_name = []
-    list_img_path = []
-    for class_name in os.listdir(dir_path):
-        class_path = os.path.join(dir_path, class_name)
-        if os.path.isdir(class_path):
-            for img_name in os.listdir(class_path):
-                if img_name.endswith('.png'):
-                    img_path = os.path.join(class_path, img_name)
-                    list_class_name.append(class_name)
-                    list_img_path.append(img_path)
-
-    return list_class_name, list_img_path
-
-
-def get_train_val_split(wandb_config, list_class_name, list_img_path):
-    train_class_name, val_class_name, train_path_img, val_path_img = train_test_split(
-        list_class_name, list_img_path,
+def get_train_val_split(wandb_config, image_paths, labels):
+    train_image_paths, val_image_paths, train_labels, val_labels = train_test_split(
+        image_paths, labels,
         train_size=0.8,
         random_state=wandb_config['random_state'],
-        stratify=list_class_name
+        stratify=labels
     )
 
-    return train_class_name, val_class_name, train_path_img, val_path_img
+    return train_image_paths, val_image_paths, train_labels, val_labels
 
 
 def get_image_folder(config):
@@ -142,22 +121,32 @@ def get_image_folder(config):
     return path
 
 
-def make_train_triplet_dataset(config, wandb_config):
+def get_curated_class_path(config, wandb_config):
     image_folder = get_image_folder(config)
-    list_class_name, list_img_path = get_class_path(image_folder)
-    processor = dT.make_training_processor(config, wandb_config)
-    train_class_name, _, train_path_img, _ = get_train_val_split(wandb_config, list_class_name, list_img_path)
+    curated_image_paths, curated_labels = utils.get_paths_labels(image_folder)
+    augmented_dataset = utils.load_augmented_dataset(wandb_config)
+    augmented_image_paths = [image_dict['image_path'] for image_dict in augmented_dataset]
+    augmented_labels = [image_dict['label'] for image_dict in augmented_dataset]
+    curated_image_paths.extend(augmented_image_paths)
+    curated_labels.extend(augmented_labels)
+    
+    return curated_image_paths, curated_labels
 
-    return RefConTripletDataset(wandb_config, train_class_name, train_path_img, processor, True)
+
+def make_train_triplet_dataset(config, wandb_config):
+    curated_image_paths, curated_labels  = get_curated_class_path(config, wandb_config)
+    processor = dT.make_training_processor(config, wandb_config)
+    train_image_paths, _, train_labels, _ = get_train_val_split(wandb_config, curated_image_paths, curated_labels)
+
+    return RefConTripletDataset(wandb_config, train_image_paths, train_labels, processor, True)
 
 
 def make_val_triplet_dataset(config, wandb_config):
-    image_folder = get_image_folder(config)
-    list_class_name, list_img_path = get_class_path(image_folder)
+    curated_image_paths, curated_labels = get_curated_class_path(config, wandb_config)
     processor = dT.make_training_processor(config, wandb_config)
-    _, val_class_name, _, val_path_img = get_train_val_split(wandb_config, list_class_name, list_img_path)
+    _, val_image_paths, _, val_labels = get_train_val_split(wandb_config, curated_image_paths, curated_labels)
 
-    return RefConTripletDataset(wandb_config, val_class_name, val_path_img, processor, False)
+    return RefConTripletDataset(wandb_config, val_image_paths, val_labels, processor, False)
 
 
 def _debug():

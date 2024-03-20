@@ -1,5 +1,5 @@
 torchvision:
-  dry: false
+  dry: true
 
   random_state: 42
   max_epochs: 1000
@@ -11,7 +11,8 @@ torchvision:
   exclude_anchor: [ 'Boring' ]
 
   model_id: 'ViT_L_16_SEISMIC31K_SGD'
-
+  checkpoint: None
+  
   batch_size: 32
   val_check_interval: 1.0
 
@@ -20,7 +21,7 @@ torchvision:
   devices: [ 0 ]
 
 transformers:
-  dry: false
+  dry: true
 
   random_state: 42
   max_epochs: 1000

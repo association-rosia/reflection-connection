@@ -19,13 +19,13 @@ torch.set_float32_matmul_precision('medium')
 def main():
     config = utils.get_config()
     wandb_config = utils.init_wandb('training/vit.yml', 'transformers')
-    trainer = mutils.get_trainer(config, wandb_config)
+    trainer = mutils.get_trainer(config)
     lightning = get_lightning(config, wandb_config)
     trainer.fit(model=lightning)
     wandb.finish()
 
 
-def get_lightning(config, wandb_config, checkpoint=None):
+def get_lightning(config, wandb_config):
     model = vit_l.get_model(config, wandb_config)
 
     kwargs = {
@@ -34,6 +34,7 @@ def get_lightning(config, wandb_config, checkpoint=None):
         'model': model
     }
 
+    checkpoint = wandb_config.get('checkpoint', None)
     if checkpoint is None:
         lightning = vit_l.RefConLightning(**kwargs)
     else:
