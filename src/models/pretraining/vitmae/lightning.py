@@ -57,7 +57,7 @@ class RefConLightning(pl.LightningModule):
         return [optimizer], [scheduler]
 
     def train_dataloader(self):
-        dataset = vitmae_td.make_petrain_dataset(self.config, self.wandb_config, set='train')
+        dataset = vitmae_td.make_pretrain_dataset(self.config, self.wandb_config, set='train')
 
         dataloader = DataLoader(
             dataset=dataset,
@@ -70,7 +70,7 @@ class RefConLightning(pl.LightningModule):
         return dataloader
 
     def val_dataloader(self):
-        dataset = vitmae_td.make_petrain_dataset(self.config, self.wandb_config, set='val')
+        dataset = vitmae_td.make_pretrain_dataset(self.config, self.wandb_config, set='val')
 
         dataloader = DataLoader(
             dataset=dataset,

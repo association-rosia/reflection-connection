@@ -1,12 +1,10 @@
-import os
-from glob import glob
-
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
 
 import src.data.transforms as dT
 from src import utils
+from src.data import utils as d_utils
 
 
 class RefConDinov2Dataset(Dataset):
@@ -44,25 +42,8 @@ class RefConDinov2Dataset(Dataset):
         return item
 
 
-def get_images_path(config, set):
-    if set == 'train':
-        pretrain_path = os.path.join(config['path']['data'], 'processed', 'pretrain')
-        pretrain_glob = os.path.join(pretrain_path, '**/*.png')
-        images_path = glob(pretrain_glob, recursive=True)
-    elif set == 'val':
-        train_path = os.path.join(config['path']['data'], 'raw', 'train')
-        train_glob = os.path.join(train_path, '**/*.png')
-        test_path = os.path.join(config['path']['data'], 'raw', 'test')
-        test_glob = os.path.join(test_path, '**/*.png')
-        images_path = glob(train_glob, recursive=True) + glob(test_glob, recursive=True)
-    else:
-        raise ValueError(f'Unknown set: {set}')
-
-    return images_path
-
-
-def make_petrain_dataset(config, wandb_config, set):
-    images_path = get_images_path(config, set)
+def make_pretrain_dataset(config, wandb_config, set):
+    images_path = d_utils.get_images_path(config, set)
     processor = dT.make_pretraining_processor(config, wandb_config)
 
     return RefConDinov2Dataset(wandb_config, images_path, processor)
@@ -72,10 +53,10 @@ def _debug():
     from tqdm.autonotebook import tqdm
 
     config = utils.get_config()
-    wandb_config = utils.load_config('pretrain.yml')
-    pretrain_dataset = make_petrain_dataset(config, wandb_config)
+    wandb_config = utils.load_config('pretraining/dinov2.yml')
+    dataset = make_pretrain_dataset(config, wandb_config, set='train')
 
-    for inputs in tqdm(pretrain_dataset):
+    for inputs in tqdm(dataset):
         pass
 
     pass

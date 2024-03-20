@@ -7,6 +7,8 @@ import numpy as np
 from PIL import Image
 from tqdm import tqdm
 
+import matplotlib.pyplot as plt
+
 import src.utils as utils
 
 
@@ -41,7 +43,7 @@ def draw_random_shape(values, counts):
 
 
 def normalize_pretrain_slice(slice):
-    slice = cv2.normalize(slice, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32FC1)
+    slice = cv2.normalize(slice, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_32FC1)
 
     return slice
 
@@ -81,7 +83,7 @@ def extract_tiles_from_slice(slice, save_volume_path, values, counts, volume_nam
     for x0, x1, y0, y1 in tiles_coords:
         tile = slice[x0:x1, y0:y1]
         tile = normalize_pretrain_slice(tile)
-        image = Image.fromarray(tile).convert('RGB')
+        image = Image.fromarray(tile).convert('L')
         save_image_path = os.path.join(save_volume_path, f'{volume_name}-{image_idx}.png')
         image.save(save_image_path)
         image_idx += 1

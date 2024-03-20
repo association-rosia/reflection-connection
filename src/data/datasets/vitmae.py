@@ -3,7 +3,7 @@ from torch.utils.data import Dataset
 
 import src.data.transforms as dT
 from src import utils
-from src.data import utils
+from src.data import utils as d_utils
 
 
 class RefConViTMAEDataset(Dataset):
@@ -30,8 +30,8 @@ class RefConViTMAEDataset(Dataset):
         return item
 
 
-def make_petrain_dataset(config, wandb_config, set):
-    images_path = utils.get_images_path(config, set)
+def make_pretrain_dataset(config, wandb_config, set):
+    images_path = d_utils.get_images_path(config, set)
     processor = dT.make_pretraining_processor(config, wandb_config)
 
     return RefConViTMAEDataset(wandb_config, images_path, processor)
@@ -41,10 +41,10 @@ def _debug():
     from tqdm.autonotebook import tqdm
 
     config = utils.get_config()
-    wandb_config = utils.load_config('pretrain.yml')
-    pretrain_dataset = make_petrain_dataset(config, wandb_config)
+    wandb_config = utils.load_config('pretraining/vitmae.yml')
+    dataset = make_pretrain_dataset(config, wandb_config, set='val')
 
-    for inputs in tqdm(pretrain_dataset):
+    for inputs in tqdm(dataset):
         pass
 
     pass
