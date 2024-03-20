@@ -11,9 +11,10 @@ import pytorch_lightning as pl
 from typing import Any
 
 import torch
-from torchvision.models import VisionTransformer, vit_b_16, vit_l_16
+from torchvision.models import vit_b_16, vit_l_16
+from src.models.modules import RefConTorchvisionViT
 
-import src.data.datasets.triplet_dataset as td
+import src.data.datasets.triplet as triplet_d
 from src.models.losses import make_triplet_criterion
 from src import utils
 
@@ -23,7 +24,7 @@ class RefConLightning(pl.LightningModule):
             self,
             config: dict,
             wandb_config: dict,
-            model: VisionTransformer,
+            model: RefConTorchvisionViT,
             *args: Any,
             **kwargs: Any
     ):
@@ -64,7 +65,7 @@ class RefConLightning(pl.LightningModule):
         return [optimizer], [scheduler]
 
     def train_dataloader(self):
-        dataset = td.make_train_triplet_dataset(self.config, self.wandb_config)
+        dataset = triplet_d.make_train_triplet_dataset(self.config, self.wandb_config)
 
         dataloader = DataLoader(
             dataset=dataset,
@@ -77,7 +78,7 @@ class RefConLightning(pl.LightningModule):
         return dataloader
 
     def val_dataloader(self):
-        dataset = td.make_val_triplet_dataset(self.config, self.wandb_config)
+        dataset = triplet_d.make_val_triplet_dataset(self.config, self.wandb_config)
 
         dataloader = DataLoader(
             dataset=dataset,
@@ -90,26 +91,27 @@ class RefConLightning(pl.LightningModule):
         return dataloader
 
 
-def get_model(wandb_config) -> VisionTransformer:
+def get_model(wandb_config) -> RefConTorchvisionViT:
     model_id = wandb_config['model_id']
 
     if 'ViT_B_16' in model_id:
-        model = vit_b_16(pretrained=False)
+        vit = vit_b_16(pretrained=False)
     elif 'ViT_L_16' in model_id:
-        model = vit_l_16(pretrained=False)
+        vit = vit_l_16(pretrained=False)
     else:
         ValueError(f'Unknown model_id: {model_id}')
 
     weights_path = os.path.join('models', f'{model_id}.pth')
     weights = torch.load(weights_path)
-    model.load_state_dict(weights)
+    vit.load_state_dict(weights)
+    model = RefConTorchvisionViT(vit)
 
     return model
 
 
 def _debug():
     config = utils.get_config()
-    wandb_config = utils.init_wandb('vit.yml')
+    wandb_config = utils.init_wandb('training/vit.yml', 'torchvision')
     model = get_model(wandb_config)
 
     kwargs = {
