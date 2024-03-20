@@ -1,13 +1,17 @@
 import os
 import json
 import numpy as np
+import multiprocessing as mp
 from src import utils
 import src.data.datasets.inference_dataset as inf_data
 import src.models.utils as mutils
 from src.models.retriever import FaissRetriever
 from src.models.inference import EmbeddingsBuilder
 import wandb
-
+import wandb.apis.public as wandb_api
+import torch
+import copy
+from torch.utils.data import Subset
 
 def main():
     config = utils.get_config()
@@ -19,8 +23,7 @@ def main():
         config,
         iterative_config,
         curated_folder,
-        uncurated_folder,
-        devices=[0, 1, 2, 3]
+        uncurated_folder
     )
     
     iterative_trainer.fit()
@@ -30,41 +33,55 @@ class IterativeTrainer:
                  config,
                  iterative_config,
                  curated_folder,
-                 uncurated_folder,
-                 devices) -> None:
+                 uncurated_folder) -> None:
         self.config = config
         self.iterative_config = iterative_config
         self.curated_folder = curated_folder
         self.uncurated_folder = uncurated_folder
-        self.devices = devices
         self.path_iterative_data = os.path.join(self.config['path']['data'], 'processed', 'train')
     
     def fit(self):
         iterative_data = None
+        manager = mp.Manager()
+        wandb_dict = manager.dict()
         for _ in range(self.iterative_config['iterations']):
-            utils.init_wandb(self.iterative_config['model_config'])
-            wandb.config.update({
-                'iterative_data': iterative_data, 
-                'curated_threshold': self.iterative_config['curated_threshold'],
-                'duplicate_threshold': self.iterative_config['duplicate_threshold'],
-            })
-            self._train_model()
-            iterative_data = self._create_next_iterative_dataset()
-            wandb.finish()
+            if len(self.iterative_config['devices']) > 1:
+                p = mp.Process(target=self._train_model, args=(iterative_data, wandb_dict))
+                p.start()
+                p.join()
+            else:
+                self._train_model(iterative_data, wandb_dict)
 
-    def _train_model(self):
-        trainer = mutils.get_trainer(self.config, devices=self.devices)
+            wandb_run = utils.get_run(wandb_dict['value'])
+            iterative_data = self._create_next_iterative_dataset(wandb_run)
+
+    def _train_model(self, iterative_data, wandb_dict):
+        utils.init_wandb(self.iterative_config['model_config'])
+        wandb.config.update({
+            'iterative_data': iterative_data, 
+            'curated_threshold': self.iterative_config['curated_threshold'],
+            'duplicate_threshold': self.iterative_config['duplicate_threshold'],
+            'devices': self.iterative_config['devices']
+        }, allow_val_change=True)
+        wandb_dict['value'] =  copy.deepcopy(wandb.run.id)
+        trainer = mutils.get_trainer(self.config)
         lightning = mutils.get_lightning(self.config, wandb.config)
         trainer.fit(model=lightning)
-
-    def _create_next_iterative_dataset(self):
-        embeddings_builder = EmbeddingsBuilder(devices=self.devices)
-        corpus_dataset = inf_data.make_iterative_corpus_inference_dataset(self.config, wandb.config)
-        corpus_embeddings, corpus_paths = embeddings_builder.build_embeddings(self.config, wandb.config, corpus_dataset)
-        query_dataset = inf_data.make_iterative_query_inference_dataset(self.config, wandb.config)
-        query_embeddings, query_labels = embeddings_builder.build_embeddings(self.config, wandb.config, query_dataset)
+        del trainer, lightning
+        torch.cuda.empty_cache()
+        wandb.finish()
         
-        metric = utils.get_metric(wandb.config)
+        return wandb_dict
+
+    def _create_next_iterative_dataset(self, wandb_run: utils.RunDemo | wandb_api.Run):
+        embeddings_builder = EmbeddingsBuilder(devices=self.iterative_config['devices'], batch_size=64, num_workers=32)
+        query_dataset = inf_data.make_iterative_query_inference_dataset(self.config, wandb_run.config)
+        query_embeddings, query_labels = embeddings_builder.build_embeddings(self.config, wandb_run, query_dataset)
+        corpus_dataset = inf_data.make_iterative_corpus_inference_dataset(self.config, wandb_run.config)
+        corpus_dataset = Subset(corpus_dataset, indices=range(1000))
+        corpus_embeddings, corpus_paths = embeddings_builder.build_embeddings(self.config, wandb_run, corpus_dataset)
+        
+        metric = utils.get_metric(wandb_run.config)
         retriever = FaissRetriever(embeddings_size=corpus_embeddings.shape[1], metric=metric)
         retriever.add_to_index(corpus_embeddings, labels=corpus_paths)
         distances, matched_paths = retriever.query(query_embeddings, k=self.iterative_config['images_by_iterations'])
@@ -76,10 +93,10 @@ class IterativeTrainer:
         )
         curated_builder(
             query_labels, matched_paths, distances,
-            f'{wandb.run.name}-{wandb.run.id}'
+            f'{wandb_run.name}-{wandb_run.id}'
         )
         
-        return f'{wandb.run.name}-{wandb.run.id}.json'
+        return f'{wandb_run.name}-{wandb_run.id}.json'
 
 
 class CuratedBuilder:

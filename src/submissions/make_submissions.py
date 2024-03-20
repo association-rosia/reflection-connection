@@ -11,12 +11,12 @@ from src.models.inference import EmbeddingsBuilder
 
 def main():
     config = utils.get_config()
-    wandb_run = utils.get_run('tqwb6tru')
+    wandb_run = utils.get_run('qlynkj89')
     embeddings_builder = EmbeddingsBuilder(devices=0)
     
-    corpus_dataset = inf_data.make_submission_corpus_inference_dataset(config, wandb_run)
+    corpus_dataset = inf_data.make_submission_corpus_inference_dataset(config, wandb_run.config)
     corpus_embeddings, corpus_names = embeddings_builder.build_embeddings(config, wandb_run, dataset=corpus_dataset)
-    query_dataset = inf_data.make_submission_query_inference_dataset(config, wandb_run)
+    query_dataset = inf_data.make_submission_query_inference_dataset(config, wandb_run.config)
     query_embeddings, query_names = embeddings_builder.build_embeddings(config, wandb_run, dataset=query_dataset)
     
     metric = utils.get_metric(wandb_run.config)

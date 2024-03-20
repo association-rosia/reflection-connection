@@ -22,7 +22,7 @@ def get_lightning_library(model_id):
 
 
 def get_lightning(config, wandb_config, checkpoint=None):
-    lightning_module = get_lightning_library(wandb_config)
+    lightning_module = get_lightning_library(wandb_config['model_id'])
     model = lightning_module.get_model(wandb_config)
 
     kwargs = {
@@ -40,7 +40,7 @@ def get_lightning(config, wandb_config, checkpoint=None):
     return lightning
 
 
-def get_trainer(config, wandb_config):
+def get_trainer(config):
     os.makedirs(config['path']['models'], exist_ok=True)
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
         save_top_k=1,
@@ -61,13 +61,13 @@ def get_trainer(config, wandb_config):
 
     if wandb.config.dry:
         trainer = pl.Trainer(
-            max_epochs=3,
+            max_epochs=2,
             logger=pl.loggers.WandbLogger(),
             callbacks=[checkpoint_callback],
-            devices=1,
+            devices=wandb.config.devices,
             precision='16-mixed',
-            limit_train_batches=5,
-            limit_val_batches=5
+            limit_train_batches=3,
+            limit_val_batches=3
         )
     elif len(wandb.config.devices) > 1:
         trainer = pl.Trainer(
@@ -77,7 +77,7 @@ def get_trainer(config, wandb_config):
             callbacks=[checkpoint_callback],
             precision='16-mixed',
             strategy='ddp_find_unused_parameters_true',
-            val_check_interval=wandb_config['val_check_interval']
+            val_check_interval=wandb.config.val_check_interval
         )
     else:
         trainer = pl.Trainer(
@@ -86,7 +86,7 @@ def get_trainer(config, wandb_config):
             logger=pl.loggers.WandbLogger(),
             callbacks=[checkpoint_callback, early_stopping_callback],
             precision='16-mixed',
-            val_check_interval=wandb_config['val_check_interval']
+            val_check_interval=wandb.config.val_check_interval
         )
 
     return trainer

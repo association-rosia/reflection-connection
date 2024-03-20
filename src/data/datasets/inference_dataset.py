@@ -1,7 +1,5 @@
 import os
 from glob import glob
-import numpy as np
-from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset
 from PIL import Image
 
@@ -88,12 +86,16 @@ def make_submission_query_inference_dataset(config, wandb_config):
 
 
 def make_submission_corpus_inference_dataset(config, wandb_config):
-    corpus_folder = os.path.join(config['path']['data'], 'raw', 'test', 'corpus')
+    corpus_folder = os.path.join(config['path']['data'], 'raw', 'test', 'image_corpus')
     
     return make_submission_inference_dataset(corpus_folder, config, wandb_config)
 
 
 def _debug():
+    config = utils.get_config()
+    wandb_run = utils.get_run('qlynkj89')
+    dataset = make_iterative_corpus_inference_dataset(config, wandb_run.config)
+    dataset = make_iterative_query_inference_dataset(config, wandb_run.config)
     # from tqdm.autonotebook import tqdm
 
     # config = utils.get_config()

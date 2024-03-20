@@ -4,6 +4,7 @@ import torch
 import torch.multiprocessing as mp
 from torch.utils.data import DataLoader, Subset
 import wandb.apis.public as wandb_api
+import torchvision
 
 
 from tqdm.autonotebook import tqdm
@@ -29,7 +30,6 @@ def load_lightning_model(config: dict, wandb_run: wandb_api.Run | utils.RunDemo,
     path_checkpoint = utils.get_notebooks_path(path_checkpoint)
     lightning = module_lightning.RefConLightning.load_from_checkpoint(path_checkpoint, map_location=map_location,
                                                                       **kwargs)
-
     return lightning
 
 
@@ -38,7 +38,7 @@ class InferenceModel(torch.nn.Module):
                  model_id: str,
                  model: torch.nn.Module,
                 ) -> None:
-        
+        super().__init__()
         self.model_id = model_id
         self.model = model
         self.model.eval()
@@ -51,7 +51,7 @@ class InferenceModel(torch.nn.Module):
             map_location) -> Self:
         model = cls._load_model(config, wandb_run, map_location)
         self = cls(wandb_run.config['model_id'], model)
-        
+
         return self
 
     @staticmethod
@@ -103,25 +103,39 @@ class EmbeddingsBuilder:
         self.batch_size = batch_size
         self.num_workers = num_workers
 
-    def inference_worker(self, config, wandb_run, device, dataset, embeddings_labels):
+    def _inference_worker(self,
+                          config: dict,
+                          wandb_run: wandb_api.Run | utils.RunDemo,
+                          device: str,
+                          dataset: inf_data.RefConInferenceDataset,
+                          embeddings_labels = None):
+        
         model = InferenceModel.load_from_wandb_run(config, wandb_run, device)
         model = model.to(dtype=self.inference_dtype)
         loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
-        
+        embeddings = []
+        labels = []
         # Faire l'inférence avec ce DataLoader
         for _, (pixel_values, targets) in enumerate(tqdm(loader)):
             pixel_values = pixel_values.to(device=device, dtype=self.inference_dtype)
-            embeddings = model(pixel_values)
-            embeddings_labels.put(embeddings.cpu(), targets)
-
-    def build_embeddings(self, config: dict, wandb_run: wandb_api.Run | utils.RunDemo, dataset: inf_data.RefConInferenceDataset):
-        processes = []
-        embeddings_labels = mp.Queue()
+            embeddings.append(model(pixel_values).cpu())
+            labels.extend(targets)
         
+        embeddings = torch.cat(embeddings)
+        if embeddings_labels is not None:
+            embeddings_labels.append((embeddings, labels))
+        else:
+            return embeddings, labels
+
+    def _multiprocess_inference(self, config, wandb_run, dataset, output):
+        processes = []
+        manager = mp.Manager()
+        embeddings_labels = manager.list()
+
         for rank, device in enumerate(self.devices):
-            subset_indices = range(rank, len(dataset), self.devices)
+            subset_indices = list(range(rank, len(dataset), len(self.devices)))
             subset = Subset(dataset, indices=subset_indices)
-            p = mp.Process(target=self.inference_worker, args=(config, wandb_run, device, subset, embeddings_labels))
+            p = mp.Process(target=self._inference_worker, args=(config, wandb_run, device, subset, embeddings_labels))
             p.start()
             processes.append(p)
         
@@ -130,22 +144,36 @@ class EmbeddingsBuilder:
         
         embeddings = []
         labels = []
-        while not embeddings_labels.empty():
-            embedding, label = embeddings_labels.get()
+        for embedding, label in embeddings_labels:
             embeddings.append(embedding)
-            labels.append(label)
-
-        return torch.cat(embeddings), torch.cat(labels)
+            labels.extend(label)
+        
+        output.embeddings = torch.cat(embeddings)
+        output.labels = labels
+    
+    def build_embeddings(self, config: dict, wandb_run: wandb_api.Run | utils.RunDemo, dataset: inf_data.RefConInferenceDataset):
+        
+        if len(self.devices) > 1:
+            manager = mp.Manager()
+            output = manager.Namespace()
+            output.embeddings = None
+            output.labels = None
+            p = mp.Process(target=self._multiprocess_inference, args=(config, wandb_run, dataset, output))
+            p.start()
+            p.join()
+            return output.embeddings, output.labels
+        else:
+            return self._inference_worker(config, wandb_run, self.devices[0], dataset)
 
 
 def _debug():
     config = utils.get_config()
-    wandb_run = utils.get_run('96t0rkbl')
-    model = InferenceModel.load_from_wandb_run(config, wandb_run, 'cpu')
-    embeddings_builder = EmbeddingsBuilder(device=0, return_names=True)
-    folder_path = os.path.join(config['path']['data'], 'raw', 'train')
-    embeddings_builder.build_embeddings(model=model, folder_path=folder_path)
-
+    wandb_run = utils.get_run('omo3q9fq')
+    embeddings_builder = EmbeddingsBuilder(devices=[0], batch_size=64, num_workers=32)
+    dataset = inf_data.make_iterative_query_inference_dataset(config, wandb_run.config)
+    embeddings_builder.build_embeddings(config, wandb_run, dataset)
+    emb, lab = embeddings_builder.build_embeddings(config, wandb_run, dataset)
+    
     return
 
 

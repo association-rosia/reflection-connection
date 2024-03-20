@@ -4,6 +4,8 @@ images_by_iterations: 10
 curated_threshold: 0.1
 duplicate_threshold: 0
 
-model_config: 'dinov2.yml'
+model_config: 'vit_torchvision.yml'
 
 pretrained_model: None
+
+devices: [0]
