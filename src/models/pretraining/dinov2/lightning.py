@@ -1,11 +1,12 @@
-import torch
-from torch import nn
 import pytorch_lightning as pl
-from transformers import ViTModel
-from src.models.losses import DINOLoss, iBOTLoss, KoLeoLoss
+import torch
 from torch.utils.data import DataLoader
-import src.data.datasets.pretrain_dataset as td
+from transformers import ViTModel
+
+import src.data.datasets.dinov2 as dinov2_d
 from src import utils
+from src.models.losses import DINOLoss, iBOTLoss, KoLeoLoss
+from src.models.modules import RefConHead
 
 
 class RefConLightning(pl.LightningModule):
@@ -68,7 +69,7 @@ class RefConLightning(pl.LightningModule):
 
         koleo_student_cls = ibot_student_ps[:, 0, :]
         koleo_loss = self.koleo_loss(koleo_student_cls)
-        loss += 0.1 * koleo_loss
+        loss += 0.2 * koleo_loss
 
         self.update_teacher()
 
@@ -99,7 +100,7 @@ class RefConLightning(pl.LightningModule):
         self.log_dict({
             'val/dino_loss': dino_loss,
             'val/ibot_loss': ibot_loss,
-            'train/koleo_loss': koleo_loss,
+            'val/koleo_loss': koleo_loss,
             'val/loss': loss
         })
 
@@ -125,7 +126,7 @@ class RefConLightning(pl.LightningModule):
             teacher_param.data = teacher_momentum * teacher_param.data + (1 - teacher_momentum) * student_param.data
 
     def train_dataloader(self):
-        dataset = td.make_petrain_dataset(self.config, self.wandb_config, set='train')
+        dataset = dinov2_d.make_petrain_dataset(self.config, self.wandb_config, set='train')
 
         dataloader = DataLoader(
             dataset=dataset,
@@ -138,7 +139,7 @@ class RefConLightning(pl.LightningModule):
         return dataloader
 
     def val_dataloader(self):
-        dataset = td.make_petrain_dataset(self.config, self.wandb_config, set='val')
+        dataset = dinov2_d.make_petrain_dataset(self.config, self.wandb_config, set='val')
 
         dataloader = DataLoader(
             dataset=dataset,
@@ -149,21 +150,6 @@ class RefConLightning(pl.LightningModule):
         )
 
         return dataloader
-
-
-class RefConHead(nn.Module):
-    def __init__(self, input_dim, output_dim):
-        super().__init__()
-        self.head = nn.Sequential(
-            nn.Linear(input_dim, input_dim),
-            nn.GELU(),
-            nn.Linear(input_dim, input_dim),
-            nn.GELU(),
-            nn.Linear(input_dim, output_dim)
-        )
-
-    def forward(self, x):
-        return self.head(x)
 
 
 def _debug():

@@ -2,19 +2,16 @@ import warnings
 
 warnings.filterwarnings('ignore')
 
-import os
-
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 from typing import Any
 
-from transformers import ViTModel
-import src.models.pretrain.lightning as pretrain_l
+from transformers import CLIPVisionModelWithProjection
 
-import src.data.datasets.triplet_dataset as td
 from src.models.losses import make_triplet_criterion
+import src.data.datasets.triplet as triplet_d
 from src import utils
 
 
@@ -23,7 +20,7 @@ class RefConLightning(pl.LightningModule):
             self,
             config: dict,
             wandb_config: dict,
-            model: ViTModel,
+            model: CLIPVisionModelWithProjection,
             *args: Any,
             **kwargs: Any
     ):
@@ -31,12 +28,13 @@ class RefConLightning(pl.LightningModule):
         self.config = config
         self.wandb_config = wandb_config
         self.model = model
+
         self.criterion = make_triplet_criterion(self.wandb_config)
 
     def forward(self, anchors, positives, negatives):
-        anchors_embed = self.model(pixel_values=anchors).pooler_output
-        positives_embed = self.model(pixel_values=positives).pooler_output
-        negatives_embed = self.model(pixel_values=negatives).pooler_output
+        anchors_embed = self.model(pixel_values=anchors)['image_embeds']
+        positives_embed = self.model(pixel_values=positives)['image_embeds']
+        negatives_embed = self.model(pixel_values=negatives)['image_embeds']
         loss = self.criterion(anchors_embed, positives_embed, negatives_embed)
 
         return loss
@@ -64,7 +62,7 @@ class RefConLightning(pl.LightningModule):
         return [optimizer], [scheduler]
 
     def train_dataloader(self):
-        dataset = td.make_train_triplet_dataset(self.config, self.wandb_config)
+        dataset = triplet_d.make_train_triplet_dataset(self.config, self.wandb_config)
 
         dataloader = DataLoader(
             dataset=dataset,
@@ -77,7 +75,7 @@ class RefConLightning(pl.LightningModule):
         return dataloader
 
     def val_dataloader(self):
-        dataset = td.make_val_triplet_dataset(self.config, self.wandb_config)
+        dataset = triplet_d.make_val_triplet_dataset(self.config, self.wandb_config)
 
         dataloader = DataLoader(
             dataset=dataset,
@@ -90,19 +88,19 @@ class RefConLightning(pl.LightningModule):
         return dataloader
 
 
-def get_model(config, wandb_config) -> ViTModel:
-    kwargs = {'config': config, 'wandb_config': utils.load_config('pretrain.yml')}
-    path_checkpoint = os.path.join(config['path']['models'], f'{wandb_config["checkpoint"]}.ckpt')
-    lightning = pretrain_l.RefConLightning.load_from_checkpoint(path_checkpoint, **kwargs)
-    model = lightning.student_vit
+def get_model(wandb_config) -> CLIPVisionModelWithProjection:
+    model = CLIPVisionModelWithProjection.from_pretrained(
+        pretrained_model_name_or_path=wandb_config['model_id'],
+        ignore_mismatched_sizes=True
+    )
 
     return model
 
 
 def _debug():
     config = utils.get_config()
-    wandb_config = utils.init_wandb('vit_transformers.yml')
-    model = get_model(config, wandb_config)
+    wandb_config = utils.init_wandb('clip.yml')
+    model = get_model(wandb_config)
 
     kwargs = {
         'config': config,

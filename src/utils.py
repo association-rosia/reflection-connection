@@ -24,12 +24,15 @@ def get_notebooks_path(path: str) -> str:
     return new_path
 
 
-def load_config(yml_file: str) -> dict:
+def load_config(yml_file: str, sub_config: str = None) -> dict:
     root = os.path.join('configs', yml_file)
     path = get_notebooks_path(root)
 
     with open(path, 'r') as f:
         config = yaml.safe_load(f)
+
+        if sub_config is not None:
+            config = config[sub_config]
 
     return config
 
@@ -38,13 +41,13 @@ def get_config() -> dict:
     return load_config('config.yml')
 
 
-def init_wandb(yml_file: str) -> dict:
+def init_wandb(yml_file: str, sub_config: str = None) -> dict:
     config = get_config()
     wandb_dir = get_notebooks_path(config['path']['logs'])
     os.makedirs(wandb_dir, exist_ok=True)
     os.environ['WANDB_DIR'] = os.path.abspath(wandb_dir)
 
-    wandb_config = load_config(yml_file)
+    wandb_config = load_config(yml_file, sub_config)
 
     wandb.init(
         entity=config['wandb']['entity'],

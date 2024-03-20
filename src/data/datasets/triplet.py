@@ -8,8 +8,6 @@ from torch.utils.data import Dataset
 import src.data.transforms as dT
 from src import utils
 
-import matplotlib.pyplot as plt
-
 
 class RefConTripletDataset(Dataset):
     """
@@ -102,15 +100,6 @@ class RefConTripletDataset(Dataset):
         positive_img = self._load_image(positive_img_path)
         negative_img = self._load_image(negative_img_path)
 
-        # plt.imshow(anchor_img.permute(1, 2, 0))
-        # plt.show()
-        #
-        # plt.imshow(positive_img.permute(1, 2, 0))
-        # plt.show()
-        #
-        # plt.imshow(negative_img.permute(1, 2, 0))
-        # plt.show()
-
         return anchor_img, positive_img, negative_img
 
 
@@ -164,7 +153,7 @@ def _debug():
     from tqdm.autonotebook import tqdm
 
     config = utils.get_config()
-    wandb_config = utils.load_config('vit.yml')
+    wandb_config = utils.load_config('training/dinov2.yml')
     val_dataset = make_val_triplet_dataset(config, wandb_config)
     train_dataset = make_train_triplet_dataset(config, wandb_config)
 
