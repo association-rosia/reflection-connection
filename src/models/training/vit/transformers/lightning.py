@@ -91,7 +91,7 @@ class RefConLightning(pl.LightningModule):
 
 
 def get_model(config, wandb_config) -> RefConTransformersViT:
-    kwargs = {'config': config, 'wandb_config': utils.load_config('pretrain.yml')}
+    kwargs = {'config': config, 'wandb_config': utils.load_config('pretraining/dinov2.yml')}
     path_checkpoint = os.path.join(config['path']['models'], wandb_config['checkpoint'])
     lightning = pretrain_l.RefConLightning.load_from_checkpoint(path_checkpoint, **kwargs)
 
