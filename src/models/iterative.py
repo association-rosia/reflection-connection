@@ -37,19 +37,21 @@ class IterativeTrainer:
         self.path_iterative_data = os.path.join(self.config['path']['data'], 'processed', 'train')
     
     def fit(self):
-        iterative_data = None
         manager = mp.Manager()
-        wandb_dict = manager.dict()
+        fit_dict = manager.dict()
+        fit_dict['iterative_data'] = None
         for _ in range(self.iterative_config['iterations']):
-            if len(self.iterative_config['devices']) > 1:
-                p = mp.Process(target=self._train_model, args=(iterative_data, wandb_dict))
-                p.start()
-                p.join()
-            else:
-                self._train_model(iterative_data, wandb_dict)
+            # if len(self.iterative_config['devices']) > 1:
+            p = mp.Process(target=self._train_model, args=(fit_dict['iterative_data'], fit_dict))
+            p.start()
+            p.join()
+            # else:
+            #     self._train_model(iterative_data, wandb_dict)
 
-            wandb_run = utils.get_run(wandb_dict['value'])
-            iterative_data = self._create_next_iterative_dataset(wandb_run)
+            wandb_run = utils.get_run(fit_dict['value'])
+            p = mp.Process(target=self._create_next_iterative_dataset, args=(wandb_run, fit_dict))
+            p.start()
+            p.join()
 
     def _train_model(self, iterative_data, wandb_dict):
         utils.init_wandb(self.iterative_config['model_config'], self.iterative_config['sub_config'])
@@ -57,7 +59,8 @@ class IterativeTrainer:
             'iterative_data': iterative_data, 
             'curated_threshold': self.iterative_config['curated_threshold'],
             'duplicate_threshold': self.iterative_config['duplicate_threshold'],
-            'devices': self.iterative_config['devices'],
+            'devices': [1],
+            # 'devices': self.iterative_config['devices'],
             'dry': self.iterative_config['dry'],
             'checkpoint': self.iterative_config['checkpoint'],
         }, allow_val_change=True)
@@ -71,7 +74,7 @@ class IterativeTrainer:
         
         return wandb_dict
 
-    def _create_next_iterative_dataset(self, wandb_run: utils.RunDemo | wandb_api.Run):
+    def _create_next_iterative_dataset(self, wandb_run: utils.RunDemo | wandb_api.Run, fit_dict):
         embeddings_builder = EmbeddingsBuilder(devices=self.iterative_config['devices'], batch_size=64, num_workers=32)
         query_dataset = inference_d.make_iterative_query_inference_dataset(self.config, wandb_run.config)
         query_embeddings, query_labels = embeddings_builder.build_embeddings(self.config, wandb_run, query_dataset)
@@ -95,7 +98,7 @@ class IterativeTrainer:
             f'{wandb_run.name}-{wandb_run.id}'
         )
         
-        return f'{wandb_run.name}-{wandb_run.id}.json'
+        fit_dict['iterative_data'] = f'{wandb_run.name}-{wandb_run.id}.json'
 
 
 class CuratedBuilder:

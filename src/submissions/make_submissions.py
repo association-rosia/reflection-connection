@@ -4,19 +4,19 @@ import os
 import numpy as np
 
 from src import utils
-import src.data.datasets.inference_dataset as inf_data
+import src.data.datasets.inference as inference_d
 from src.models.retriever import FaissRetriever
 from src.models.inference import EmbeddingsBuilder
 
 
 def main():
     config = utils.get_config()
-    wandb_run = utils.get_run('qlynkj89')
-    embeddings_builder = EmbeddingsBuilder(devices=0)
+    wandb_run = utils.get_run('rivhpstz')
+    embeddings_builder = EmbeddingsBuilder(devices=[0])
     
-    corpus_dataset = inf_data.make_submission_corpus_inference_dataset(config, wandb_run.config)
+    corpus_dataset = inference_d.make_submission_corpus_inference_dataset(config, wandb_run.config)
     corpus_embeddings, corpus_names = embeddings_builder.build_embeddings(config, wandb_run, dataset=corpus_dataset)
-    query_dataset = inf_data.make_submission_query_inference_dataset(config, wandb_run.config)
+    query_dataset = inference_d.make_submission_query_inference_dataset(config, wandb_run.config)
     query_embeddings, query_names = embeddings_builder.build_embeddings(config, wandb_run, dataset=query_dataset)
     
     metric = utils.get_metric(wandb_run.config)
