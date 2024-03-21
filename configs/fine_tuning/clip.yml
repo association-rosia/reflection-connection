@@ -1,7 +1,7 @@
-dry: true
+dry: false
 
 random_state: 42
-max_epochs: 100
+max_epochs: 25
 criterion: 'TMWDL-Cosine'
 
 contrast_factor: 15
@@ -9,12 +9,12 @@ size: 256
 crop_size: 224
 exclude_anchor: [ 'Boring' ]
 
-model_id: 'facebook/dinov2-base'
+model_id: 'openai/clip-vit-large-patch14'
 checkpoint: None
 
-batch_size: 24
+batch_size: 32
 val_check_interval: 1.0
 
 lr: 0.000005
 
-devices: [0]
+devices: [ 0 ]

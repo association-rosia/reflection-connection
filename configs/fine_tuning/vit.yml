@@ -1,9 +1,9 @@
 torchvision:
-  dry: true
+  dry: false
 
   random_state: 42
   max_epochs: 1000
-  criterion: 'TMWDL-Cosine'
+  criterion: 'TMWDL-Euclidean'
 
   contrast_factor: 15
   size: 256
@@ -21,7 +21,7 @@ torchvision:
   devices: [ 0 ]
 
 transformers:
-  dry: true
+  dry: false
 
   random_state: 42
   max_epochs: 1000

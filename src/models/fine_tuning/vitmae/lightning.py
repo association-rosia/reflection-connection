@@ -2,23 +2,21 @@ import warnings
 
 warnings.filterwarnings('ignore')
 
-import os
-
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 from typing import Any
 
-import torch
-from torchvision.models import vit_b_16, vit_l_16
-from src.models.modules import RefConTorchvisionViT
+from transformers import ViTMAEModel
 
-# import src.data.datasets.triplet as triplet_d
-import src.data.datasets.online_mining_triplet as triplet_d
-# from src.models.losses import make_triplet_criterion
-from online_triplet_loss.losses import batch_hard_triplet_loss
+import src.data.datasets.triplet as triplet_d
+from src.models.losses import make_triplet_criterion
 from src import utils
+
+import src.models.pretraining.vitmae.lightning as vitmae_l
+
+import os
 
 
 class RefConLightning(pl.LightningModule):
@@ -26,7 +24,7 @@ class RefConLightning(pl.LightningModule):
             self,
             config: dict,
             wandb_config: dict,
-            model: RefConTorchvisionViT,
+            model: ViTMAEModel,
             *args: Any,
             **kwargs: Any
     ):
@@ -34,33 +32,25 @@ class RefConLightning(pl.LightningModule):
         self.config = config
         self.wandb_config = wandb_config
         self.model = model
-        # self.criterion = make_triplet_criterion(self.wandb_config)
 
-    # def forward(self, anchors, positives, negatives):
-    #     anchors_embed = self.model(anchors)
-    #     positives_embed = self.model(positives)
-    #     negatives_embed = self.model(negatives)
-    #     loss = self.criterion(anchors_embed, positives_embed, negatives_embed)
-    #
-    #     return loss
+        self.criterion = make_triplet_criterion(self.wandb_config)
 
-    def forward(self, inputs):
-        return self.model(inputs)
+    def forward(self, anchors, positives, negatives):
+        anchors_embed = self.model(pixel_values=anchors).last_hidden_state[:, 0, :]
+        positives_embed = self.model(pixel_values=positives).last_hidden_state[:, 0, :]
+        negatives_embed = self.model(pixel_values=negatives).last_hidden_state[:, 0, :]
+        loss = self.criterion(anchors_embed, positives_embed, negatives_embed)
+
+        return loss
 
     def training_step(self, batch):
-        labels, images = batch
-        # loss = self.forward(*batch)
-        embeddings = self.forward(images)
-        loss = batch_hard_triplet_loss(labels, embeddings, margin=5)
+        loss = self.forward(*batch)
         self.log('train/loss', loss, on_epoch=True)
 
         return loss
 
     def validation_step(self, batch):
-        labels, images = batch
-        # loss = self.forward(*batch)
-        embeddings = self.forward(images)
-        loss = batch_hard_triplet_loss(labels, embeddings, margin=5)
+        loss = self.forward(*batch)
         self.log('val/loss', loss, on_epoch=True)
 
         return loss
@@ -68,7 +58,7 @@ class RefConLightning(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = AdamW(params=self.model.parameters(), lr=self.wandb_config['lr'])
         scheduler = {
-            'scheduler': ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10, verbose=True),
+            'scheduler': ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5, verbose=True),
             'monitor': 'val/loss',
             'interval': 'epoch',
             'frequency': 1
@@ -102,33 +92,31 @@ class RefConLightning(pl.LightningModule):
         return dataloader
 
 
-def get_model(wandb_config) -> RefConTorchvisionViT:
-    model_id = wandb_config['model_id']
+def get_model(config, wandb_config) -> ViTMAEModel:
+    model = vitmae_l.get_model(wandb_config)
 
-    if 'ViT_B_16' in model_id:
-        vit = vit_b_16(pretrained=False)
-    elif 'ViT_L_16' in model_id:
-        vit = vit_l_16(pretrained=False)
-    else:
-        ValueError(f'Unknown model_id: {model_id}')
+    kwargs = {
+        'config': config,
+        'wandb_config': wandb_config,
+        'model': model
+    }
 
-    weights_path = os.path.join('models', f'{model_id}.pth')
-    weights = torch.load(weights_path)
-    vit.load_state_dict(weights)
-    model = RefConTorchvisionViT(vit)
+    path_checkpoint = os.path.join(config['path']['models'], wandb_config['pretrained_checkpoint'])
+    lightning = vitmae_l.RefConLightning.load_from_checkpoint(path_checkpoint, **kwargs)
+    model = lightning.model.vit
 
     return model
 
 
 def _debug():
     config = utils.get_config()
-    wandb_config = utils.init_wandb('training/vit.yml', 'torchvision')
-    model = get_model(wandb_config)
+    wandb_config = utils.init_wandb('training/vitmae.yml')
+    model = get_model(config, wandb_config)
 
     kwargs = {
         'config': config,
         'wandb_config': wandb_config,
-        'model': model,
+        'model': model
     }
 
     lightning = RefConLightning(**kwargs)

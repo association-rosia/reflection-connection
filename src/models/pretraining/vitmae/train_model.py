@@ -19,13 +19,13 @@ torch.set_float32_matmul_precision('medium')
 def main():
     config = utils.get_config()
     wandb_config = utils.init_wandb('pretraining/vitmae.yml')
-    trainer = mutils.get_trainer(config, wandb_config)
+    trainer = mutils.get_trainer(config)
     lightning = get_lightning(config, wandb_config)
     trainer.fit(model=lightning)
     wandb.finish()
 
 
-def get_lightning(config, wandb_config, checkpoint=None):
+def get_lightning(config, wandb_config):
     model = vitmae_l.get_model(wandb_config)
 
     kwargs = {
@@ -34,10 +34,11 @@ def get_lightning(config, wandb_config, checkpoint=None):
         'model': model
     }
 
-    if checkpoint is None:
+    checkpoint = wandb_config.get('checkpoint', 'None')
+    if checkpoint == 'None':
         lightning = vitmae_l.RefConLightning(**kwargs)
     else:
-        path_checkpoint = os.path.join(config['path']['models']['root'], checkpoint)
+        path_checkpoint = os.path.join(config['path']['models'], checkpoint)
         lightning = vitmae_l.RefConLightning.load_from_checkpoint(path_checkpoint, **kwargs)
 
     return lightning

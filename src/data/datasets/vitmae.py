@@ -1,4 +1,8 @@
+import os
+from glob import glob
+
 from PIL import Image
+from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset
 
 import src.data.transforms as dT
@@ -31,10 +35,35 @@ class RefConViTMAEDataset(Dataset):
 
 
 def make_pretrain_dataset(config, wandb_config, set):
-    images_path = d_utils.get_images_path(config, set)
+    images_path = d_utils.get_pretraining_images_path(config, set)
     processor = dT.make_pretraining_processor(config, wandb_config)
 
     return RefConViTMAEDataset(wandb_config, images_path, processor)
+
+
+def get_fine_tuned_images_path(config, wandb_config):
+    train_path = os.path.join(config['path']['data'], 'raw', 'train')
+    train_glob = os.path.join(train_path, '**/*.png')
+    test_path = os.path.join(config['path']['data'], 'raw', 'test')
+    test_glob = os.path.join(test_path, '**/*.png')
+    images_path = glob(train_glob, recursive=True) + glob(test_glob, recursive=True)
+
+    train_images_path, val_images_path = train_test_split(
+        images_path,
+        test_size=0.2,
+        random_state=wandb_config['random_state']
+    )
+
+    return train_images_path, val_images_path
+
+
+def make_fine_tuned_dataset(config, wandb_config):
+    train_images_path, val_images_path = get_fine_tuned_images_path(config, wandb_config)
+    processor = dT.make_pretraining_processor(config, wandb_config)
+    train_dataset = RefConViTMAEDataset(wandb_config, train_images_path, processor)
+    val_dataset = RefConViTMAEDataset(wandb_config, val_images_path, processor)
+
+    return train_dataset, val_dataset
 
 
 def _debug():
@@ -42,7 +71,7 @@ def _debug():
 
     config = utils.get_config()
     wandb_config = utils.load_config('pretraining/vitmae.yml')
-    dataset = make_pretrain_dataset(config, wandb_config, set='val')
+    dataset = make_fine_tuned_dataset(config, wandb_config, set='val')
 
     for inputs in tqdm(dataset):
         pass

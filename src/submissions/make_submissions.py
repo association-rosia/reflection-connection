@@ -3,22 +3,22 @@ import os
 
 import numpy as np
 
-from src import utils
 import src.data.datasets.inference as inference_d
-from src.models.retriever import FaissRetriever
+from src import utils
 from src.models.inference import EmbeddingsBuilder
+from src.models.retriever import FaissRetriever
 
 
 def main():
     config = utils.get_config()
     wandb_run = utils.get_run('rivhpstz')
     embeddings_builder = EmbeddingsBuilder(devices=[0])
-    
+
     corpus_dataset = inference_d.make_submission_corpus_inference_dataset(config, wandb_run.config)
     corpus_embeddings, corpus_names = embeddings_builder.build_embeddings(config, wandb_run, dataset=corpus_dataset)
     query_dataset = inference_d.make_submission_query_inference_dataset(config, wandb_run.config)
     query_embeddings, query_names = embeddings_builder.build_embeddings(config, wandb_run, dataset=query_dataset)
-    
+
     metric = utils.get_metric(wandb_run.config)
     retriever = FaissRetriever(embeddings_size=corpus_embeddings.shape[1], metric=metric)
     retriever.add_to_index(corpus_embeddings, labels=corpus_names)
@@ -61,13 +61,16 @@ class ResultBuilder:
 
         # validate shapes of inputs
         if len(query_image_labels.shape) != 1:
-            raise ValueError(f'Expected query_image_labels to be 1-dimensional array, got {query_image_labels.shape} instead')
+            raise ValueError(
+                f'Expected query_image_labels to be 1-dimensional array, got {query_image_labels.shape} instead')
 
         if matched_labels.shape != (query_image_labels.shape[0], self.k):
-            raise ValueError(f'Expected matched_labels to have shape {(query_image_labels.shape[0], self.k)}, got {matched_labels.shape} instead')
+            raise ValueError(
+                f'Expected matched_labels to have shape {(query_image_labels.shape[0], self.k)}, got {matched_labels.shape} instead')
 
         if scores.shape != (query_image_labels.shape[0], self.k):
-            raise ValueError(f'Expected {self.score_mode}_scores to have shape {(query_image_labels.shape[0], self.k)}, got {scores.shape} instead')
+            raise ValueError(
+                f'Expected {self.score_mode}_scores to have shape {(query_image_labels.shape[0], self.k)}, got {scores.shape} instead')
 
         for i, x in enumerate(query_image_labels):
             labels = matched_labels[i]
@@ -86,10 +89,10 @@ class ResultBuilder:
             json.dump(self.results, f)
 
     def __call__(self,
-              query_image_labels,
-              matched_labels,
-              scores,
-              json_name: str = 'results') -> None:
+                 query_image_labels,
+                 matched_labels,
+                 scores,
+                 json_name: str = 'results') -> None:
 
         self.build(query_image_labels, matched_labels, scores)
         self.to_json(json_name)

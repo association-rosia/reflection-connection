@@ -2,17 +2,15 @@ import os
 
 import torch
 import torch.multiprocessing as mp
-from torch.utils.data import DataLoader, Subset
 import wandb.apis.public as wandb_api
-
+from torch.utils.data import DataLoader, Subset
 from tqdm.autonotebook import tqdm
 from typing_extensions import Self
 
 import src.data.datasets.inference as inference_d
-
 import src.models.utils as mutils
 from src import utils
- 
+
 
 def load_lightning_model(config: dict, wandb_run: wandb_api.Run | utils.RunDemo, map_location):
     module_lightning = mutils.get_lightning_library(wandb_run.config['model_id'])
@@ -34,12 +32,12 @@ class InferenceModel(torch.nn.Module):
     def __init__(self,
                  model_id: str,
                  model: torch.nn.Module,
-                ) -> None:
+                 ) -> None:
         super().__init__()
         self.model_id = model_id
         self.model = model
         self.model.eval()
-        
+
     @classmethod
     def load_from_wandb_run(
             cls,
@@ -67,9 +65,9 @@ class InferenceModel(torch.nn.Module):
             embeddings = self._vit_torchvision_forward(pixel_values)
         elif 'vit' in self.model_id:
             embeddings = self._vit_transformers_forward(pixel_values)
-        
+
         return embeddings
-    
+
     def _clip_forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
         return self.model(pixel_values)['image_embeds']
 
@@ -86,14 +84,14 @@ class InferenceModel(torch.nn.Module):
 class EmbeddingsBuilder:
     def __init__(self,
                  devices: int | str | list[int] = 0,
-                 inference_dtype = torch.float16,
+                 inference_dtype=torch.float16,
                  batch_size: int = 16,
                  num_workers: int = 16,
                  ) -> None:
         if isinstance(devices, int):
             self.devices = [f'cuda:{devices}']
         elif isinstance(devices, list):
-            self.devices = [f'cuda:{device}'for device in devices]
+            self.devices = [f'cuda:{device}' for device in devices]
         else:
             self.devices = [devices]
         self.inference_dtype = inference_dtype
@@ -105,8 +103,8 @@ class EmbeddingsBuilder:
                           wandb_run: wandb_api.Run | utils.RunDemo,
                           device: str,
                           dataset: inference_d.RefConInferenceDataset,
-                          embeddings_labels = None):
-        
+                          embeddings_labels=None):
+
         model = InferenceModel.load_from_wandb_run(config, wandb_run, device)
         model = model.to(dtype=self.inference_dtype)
         loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
@@ -117,7 +115,7 @@ class EmbeddingsBuilder:
             pixel_values = pixel_values.to(device=device, dtype=self.inference_dtype)
             embeddings.append(model(pixel_values).cpu())
             labels.extend(targets)
-        
+
         embeddings = torch.cat(embeddings)
         if embeddings_labels is not None:
             embeddings_labels.append((embeddings, labels))
@@ -135,21 +133,22 @@ class EmbeddingsBuilder:
             p = mp.Process(target=self._inference_worker, args=(config, wandb_run, device, subset, embeddings_labels))
             p.start()
             processes.append(p)
-        
+
         for p in processes:
             p.join()
-        
+
         embeddings = []
         labels = []
         for embedding, label in embeddings_labels:
             embeddings.append(embedding)
             labels.extend(label)
-        
+
         output.embeddings = torch.cat(embeddings)
         output.labels = labels
-    
-    def build_embeddings(self, config: dict, wandb_run: wandb_api.Run | utils.RunDemo, dataset: inference_d.RefConInferenceDataset):
-        
+
+    def build_embeddings(self, config: dict, wandb_run: wandb_api.Run | utils.RunDemo,
+                         dataset: inference_d.RefConInferenceDataset):
+
         manager = mp.Manager()
         output = manager.Namespace()
         output.embeddings = None
@@ -172,7 +171,7 @@ def _debug():
     dataset = inference_d.make_iterative_query_inference_dataset(config, wandb_run.config)
     embeddings_builder.build_embeddings(config, wandb_run, dataset)
     emb, lab = embeddings_builder.build_embeddings(config, wandb_run, dataset)
-    
+
     return
 
 

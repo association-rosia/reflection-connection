@@ -1,8 +1,11 @@
-import os
 import json
+import os
 from glob import glob
-from src import utils
+
 from sklearn.model_selection import train_test_split
+
+from src import utils
+
 
 def load_augmented_dataset(wandb_config):
     if wandb_config.get('iterative_data', None) is None:
@@ -13,7 +16,8 @@ def load_augmented_dataset(wandb_config):
     with open(path, 'r') as f:
         return json.load(f)
 
-def get_images_path(config, set):
+
+def get_pretraining_images_path(config, set):
     train_path = os.path.join(config['path']['data'], 'raw', 'train')
     train_glob = os.path.join(train_path, '**/*.png')
     test_path = os.path.join(config['path']['data'], 'raw', 'test')
@@ -39,7 +43,7 @@ def get_paths_labels(folder_path):
                     img_path = os.path.join(class_path, img_name)
                     labels.append(class_name)
                     paths.append(img_path)
-    
+
     return paths, labels
 
 
@@ -49,10 +53,11 @@ def get_image_folder(config):
 
     return path
 
+
 def get_curated_class_path(config):
     image_folder = get_image_folder(config)
     curated_image_paths, curated_labels = get_paths_labels(image_folder)
-    
+
     return curated_image_paths, curated_labels
 
 

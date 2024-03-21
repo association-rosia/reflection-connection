@@ -4,7 +4,6 @@ from torch.utils.data import Dataset
 
 import src.data.transforms as dT
 from src import utils
-from src.data import utils as d_utils
 
 
 class RefConTripletDataset(Dataset):
@@ -26,7 +25,7 @@ class RefConTripletDataset(Dataset):
         self.processor = processor
         self.train = train
         self.image_paths, self.targets = self._remove_targets(image_paths, labels)
-        
+
         if not self.train:
             self.triplets = self._generate_triplets()
 
@@ -108,13 +107,14 @@ class RefConTripletDataset(Dataset):
 def make_train_triplet_dataset(config, wandb_config):
     curated_image_paths, curated_labels = d_utils.get_curated_class_path(config)
     processor = dT.make_training_processor(config, wandb_config)
-    train_image_paths, _, train_labels, _ = d_utils.get_train_val_split(wandb_config, curated_image_paths, curated_labels)
+    train_image_paths, _, train_labels, _ = d_utils.get_train_val_split(wandb_config, curated_image_paths,
+                                                                        curated_labels)
     augmented_dataset = d_utils.load_augmented_dataset(wandb_config)
     augmented_image_paths = [image_dict['image_path'] for image_dict in augmented_dataset]
     augmented_labels = [image_dict['label'] for image_dict in augmented_dataset]
     train_image_paths.extend(augmented_image_paths)
     train_labels.extend(augmented_labels)
-    
+
     return RefConTripletDataset(wandb_config, train_image_paths, train_labels, processor, True)
 
 
@@ -127,8 +127,6 @@ def make_val_triplet_dataset(config, wandb_config):
 
 
 def _debug():
-    from tqdm.autonotebook import tqdm
-
     config = utils.get_config()
     wandb_config = utils.load_config('training/dinov2.yml')
     val_dataset = make_val_triplet_dataset(config, wandb_config)

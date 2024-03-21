@@ -54,7 +54,7 @@ class RefConLightning(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = AdamW(params=self.model.parameters(), lr=self.wandb_config['lr'])
         scheduler = {
-            'scheduler': ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10, verbose=True),
+            'scheduler': ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5, verbose=True),
             'monitor': 'val/loss',
             'interval': 'epoch',
             'frequency': 1

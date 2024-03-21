@@ -29,19 +29,18 @@ class RefConLightning(pl.LightningModule):
         self.model = model
 
     def forward(self, inputs):
-        outputs = self.model(pixel_values=inputs)
-        loss = outputs.loss
-
-        return loss
+        return self.model(pixel_values=inputs)
 
     def training_step(self, batch):
-        loss = self.forward(batch)
+        outputs = self.forward(batch)
+        loss = outputs.loss
         self.log('train/loss', loss, on_epoch=True, sync_dist=True)
 
         return loss
 
-    def validation_step(self, batch):
-        loss = self.forward(batch)
+    def validation_step(self, batch, batch_idx):
+        outputs = self.forward(batch)
+        loss = outputs.loss
         self.log('val/loss', loss, on_epoch=True, sync_dist=True)
 
         return loss
@@ -49,15 +48,20 @@ class RefConLightning(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = AdamW(params=self.model.parameters(), lr=self.wandb_config['lr'])
         scheduler = {
-            'scheduler': ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=1, verbose=True),
+            'scheduler': ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5, verbose=True),
             'monitor': 'val/loss',
             'interval': 'epoch',
-            'frequency': 1
+            # 'frequency': 1
         }
         return [optimizer], [scheduler]
 
     def train_dataloader(self):
-        dataset = vitmae_td.make_pretrain_dataset(self.config, self.wandb_config, set='train')
+        if self.wandb_config['type'] == 'pretraining':
+            dataset = vitmae_td.make_pretrain_dataset(self.config, self.wandb_config, set='train')
+        elif self.wandb_config['type'] == 'fine-tuning':
+            dataset, _ = vitmae_td.make_fine_tuned_dataset(self.config, self.wandb_config)
+        else:
+            raise ValueError(f'Unknown training type: {self.config["type"]}')
 
         dataloader = DataLoader(
             dataset=dataset,
@@ -70,7 +74,12 @@ class RefConLightning(pl.LightningModule):
         return dataloader
 
     def val_dataloader(self):
-        dataset = vitmae_td.make_pretrain_dataset(self.config, self.wandb_config, set='val')
+        if self.wandb_config['type'] == 'pretraining':
+            dataset = vitmae_td.make_pretrain_dataset(self.config, self.wandb_config, set='val')
+        elif self.wandb_config['type'] == 'fine-tuning':
+            _, dataset = vitmae_td.make_fine_tuned_dataset(self.config, self.wandb_config)
+        else:
+            raise ValueError(f'Unknown training type: {self.config["type"]}')
 
         dataloader = DataLoader(
             dataset=dataset,
@@ -91,7 +100,7 @@ def get_model(wandb_config) -> ViTMAEForPreTraining:
 
 def _debug():
     config = utils.get_config()
-    wandb_config = utils.init_wandb('pretraining/vitmae.yml')
+    wandb_config = utils.init_wandb('training/vitmae.yml')
     model = get_model(wandb_config)
 
     kwargs = {

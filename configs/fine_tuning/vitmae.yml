@@ -1,7 +1,7 @@
-dry: true
+dry: false
 
 random_state: 42
-max_epochs: 25
+max_epochs: 100
 criterion: 'TMWDL-Cosine'
 
 contrast_factor: 15
@@ -9,12 +9,12 @@ size: 256
 crop_size: 224
 exclude_anchor: [ 'Boring' ]
 
-model_id: 'openai/clip-vit-large-patch14'
-checkpoint: None
+model_id: 'facebook/vit-mae-large'
+pretrained_checkpoint: 'fanciful-bush-370-lmqv1byw.ckpt'
 
-batch_size: 24
+batch_size: 32
 val_check_interval: 1.0
 
-lr: 0.000005
+lr: 0.000001
 
 devices: [ 0 ]
