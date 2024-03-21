@@ -2,10 +2,11 @@ import os
 
 import pytorch_lightning as pl
 import wandb
-import src.models.fine_tuning.vit.torchvision.lightning as vit_torchvision
-import src.models.fine_tuning.vit.transformers.lightning as vit_transformers
+
 import src.models.fine_tuning.clip.lightning as clip
 import src.models.fine_tuning.dinov2.lightning as dinov2
+import src.models.fine_tuning.vit.torchvision.lightning as vit_torchvision
+import src.models.fine_tuning.vit.transformers.lightning as vit_transformers
 
 
 def get_lightning_library(model_id):

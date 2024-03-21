@@ -1,10 +1,10 @@
+import json
 import os
 
 import torch
 import wandb
 import wandb.apis.public as wandb_api
 import yaml
-import json
 
 
 def get_device() -> str:
@@ -110,5 +110,5 @@ def get_paths_labels(folder_path):
                     img_path = os.path.join(class_path, img_name)
                     labels.append(class_name)
                     paths.append(img_path)
-    
+
     return paths, labels

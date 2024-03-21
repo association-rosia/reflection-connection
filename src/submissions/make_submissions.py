@@ -4,9 +4,8 @@ import os
 import numpy as np
 
 from src import utils
-import src.data.datasets.inference_dataset as inf_data
-from src.models.retriever import FaissRetriever
 from src.models.inference import EmbeddingsBuilder
+from src.models.retriever import FaissRetriever
 
 
 def main():
@@ -63,13 +62,16 @@ class ResultBuilder:
 
         # validate shapes of inputs
         if len(query_image_labels.shape) != 1:
-            raise ValueError(f'Expected query_image_labels to be 1-dimensional array, got {query_image_labels.shape} instead')
+            raise ValueError(
+                f'Expected query_image_labels to be 1-dimensional array, got {query_image_labels.shape} instead')
 
         if matched_labels.shape != (query_image_labels.shape[0], self.k):
-            raise ValueError(f'Expected matched_labels to have shape {(query_image_labels.shape[0], self.k)}, got {matched_labels.shape} instead')
+            raise ValueError(
+                f'Expected matched_labels to have shape {(query_image_labels.shape[0], self.k)}, got {matched_labels.shape} instead')
 
         if scores.shape != (query_image_labels.shape[0], self.k):
-            raise ValueError(f'Expected {self.score_mode}_scores to have shape {(query_image_labels.shape[0], self.k)}, got {scores.shape} instead')
+            raise ValueError(
+                f'Expected {self.score_mode}_scores to have shape {(query_image_labels.shape[0], self.k)}, got {scores.shape} instead')
 
         for i, x in enumerate(query_image_labels):
             labels = matched_labels[i]
@@ -88,10 +90,10 @@ class ResultBuilder:
             json.dump(self.results, f)
 
     def __call__(self,
-              query_image_labels,
-              matched_labels,
-              scores,
-              json_name: str = 'results') -> None:
+                 query_image_labels,
+                 matched_labels,
+                 scores,
+                 json_name: str = 'results') -> None:
 
         self.build(query_image_labels, matched_labels, scores)
         self.to_json(json_name)

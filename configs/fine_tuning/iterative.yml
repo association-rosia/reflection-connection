@@ -11,4 +11,4 @@ sub_config: 'torchvision'
 
 checkpoint: None
 
-devices: [0]
+devices: [ 0 ]

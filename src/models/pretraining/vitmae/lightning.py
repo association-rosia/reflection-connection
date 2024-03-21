@@ -13,8 +13,6 @@ from transformers import ViTMAEForPreTraining
 import src.data.datasets.vitmae as vitmae_td
 from src import utils
 
-import wandb
-
 
 class RefConLightning(pl.LightningModule):
     def __init__(
@@ -44,9 +42,6 @@ class RefConLightning(pl.LightningModule):
         outputs = self.forward(batch)
         loss = outputs.loss
         self.log('val/loss', loss, on_epoch=True, sync_dist=True)
-
-        if batch_idx == 0:
-            self.log_image(batch, outputs)
 
         return loss
 

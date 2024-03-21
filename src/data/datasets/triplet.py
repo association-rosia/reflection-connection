@@ -7,7 +7,6 @@ from torch.utils.data import Dataset
 
 import src.data.transforms as dT
 from src import utils
-from src.data import utils as d_utils
 
 
 class RefConTripletDataset(Dataset):

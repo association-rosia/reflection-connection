@@ -1,7 +1,9 @@
 import os
 from glob import glob
-from src import utils
+
 from sklearn.model_selection import train_test_split
+
+from src import utils
 
 
 def get_pretraining_images_path(config, set):
