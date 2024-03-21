@@ -17,7 +17,6 @@ from src import utils
 def load_lightning_model(config: dict, wandb_run: wandb_api.Run | utils.RunDemo, map_location):
     module_lightning = mutils.get_lightning_library(wandb_run.config['model_id'])
     model = module_lightning.get_model(wandb_run.config)
-    
     kwargs = {
         'config': config,
         'wandb_config': wandb_run.config,
@@ -125,7 +124,7 @@ class EmbeddingsBuilder:
         else:
             return embeddings, labels
 
-    def _multiprocess_inference(self, config, wandb_run, dataset, output):
+    def _multiprocess_inference(self, config, wandb_run, dataset, output=None):
         processes = []
         manager = mp.Manager()
         embeddings_labels = manager.list()
@@ -151,23 +150,25 @@ class EmbeddingsBuilder:
     
     def build_embeddings(self, config: dict, wandb_run: wandb_api.Run | utils.RunDemo, dataset: inference_d.RefConInferenceDataset):
         
-        if len(self.devices) > 1:
-            manager = mp.Manager()
-            output = manager.Namespace()
-            output.embeddings = None
-            output.labels = None
-            p = mp.Process(target=self._multiprocess_inference, args=(config, wandb_run, dataset, output))
-            p.start()
-            p.join()
-            return output.embeddings, output.labels
-        else:
-            return self._inference_worker(config, wandb_run, self.devices[0], dataset)
+        manager = mp.Manager()
+        output = manager.Namespace()
+        output.embeddings = None
+        output.labels = None
+        p = mp.Process(target=self._multiprocess_inference, args=(config, wandb_run, dataset, output))
+        p.start()
+        p.join()
+
+        return output.embeddings, output.labels
 
 
 def _debug():
     config = utils.get_config()
-    wandb_run = utils.get_run('omo3q9fq')
-    embeddings_builder = EmbeddingsBuilder(devices=[0], batch_size=64, num_workers=32)
+    wandb_run = utils.get_run('0p4a3nf5')
+    embeddings_builder = EmbeddingsBuilder(devices=[1, 2, 3], batch_size=64, num_workers=32)
+    dataset = inference_d.make_iterative_query_inference_dataset(config, wandb_run.config)
+    wandb_run.config['iterative_data'] = 'amber-capybara-420-nyq178fx.json'
+    dataset = inference_d.make_iterative_query_inference_dataset(config, wandb_run.config)
+    wandb_run.config['iterative_data'] = 'neat-vortex-421-9lede7xa.json'
     dataset = inference_d.make_iterative_query_inference_dataset(config, wandb_run.config)
     embeddings_builder.build_embeddings(config, wandb_run, dataset)
     emb, lab = embeddings_builder.build_embeddings(config, wandb_run, dataset)

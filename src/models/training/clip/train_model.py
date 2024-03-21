@@ -34,8 +34,8 @@ def get_lightning(config, wandb_config):
         'model': model
     }
 
-    checkpoint = wandb_config.get('checkpoint', None)
-    if checkpoint is None:
+    checkpoint = wandb_config.get('checkpoint', 'None')
+    if checkpoint == 'None':
         lightning = clip_l.RefConLightning(**kwargs)
     else:
         path_checkpoint = os.path.join(config['path']['models'], checkpoint)

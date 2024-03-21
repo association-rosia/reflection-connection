@@ -1,8 +1,8 @@
 dry: false
 
-iterations: 4
+iterations: 10
 
-images_by_iterations: 4
+images_by_iterations: 1
 curated_threshold: 0.1
 duplicate_threshold: 0
 
@@ -11,4 +11,4 @@ sub_config: 'torchvision'
 
 checkpoint: None
 
-devices: [0]
+devices: [1, 2, 3]
