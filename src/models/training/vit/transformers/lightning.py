@@ -43,13 +43,13 @@ class RefConLightning(pl.LightningModule):
 
     def training_step(self, batch):
         loss = self.forward(*batch)
-        self.log('train/loss', loss, on_epoch=True, sync_dist=True)
+        self.log('train/loss', loss, on_epoch=True)
 
         return loss
 
     def validation_step(self, batch):
         loss = self.forward(*batch)
-        self.log('val/loss', loss, on_epoch=True, sync_dist=True)
+        self.log('val/loss', loss, on_epoch=True)
 
         return loss
 

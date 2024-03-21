@@ -14,8 +14,10 @@ import torch
 from torchvision.models import vit_b_16, vit_l_16
 from src.models.modules import RefConTorchvisionViT
 
-import src.data.datasets.triplet as triplet_d
-from src.models.losses import make_triplet_criterion
+# import src.data.datasets.triplet as triplet_d
+import src.data.datasets.online_mining_triplet as triplet_d
+# from src.models.losses import make_triplet_criterion
+from online_triplet_loss.losses import batch_hard_triplet_loss
 from src import utils
 
 
@@ -32,25 +34,34 @@ class RefConLightning(pl.LightningModule):
         self.config = config
         self.wandb_config = wandb_config
         self.model = model
-        self.criterion = make_triplet_criterion(self.wandb_config)
+        # self.criterion = make_triplet_criterion(self.wandb_config)
 
-    def forward(self, anchors, positives, negatives):
-        anchors_embed = self.model(anchors)
-        positives_embed = self.model(positives)
-        negatives_embed = self.model(negatives)
-        loss = self.criterion(anchors_embed, positives_embed, negatives_embed)
+    # def forward(self, anchors, positives, negatives):
+    #     anchors_embed = self.model(anchors)
+    #     positives_embed = self.model(positives)
+    #     negatives_embed = self.model(negatives)
+    #     loss = self.criterion(anchors_embed, positives_embed, negatives_embed)
+    #
+    #     return loss
 
-        return loss
+    def forward(self, inputs):
+        return self.model(inputs)
 
     def training_step(self, batch):
-        loss = self.forward(*batch)
-        self.log('train/loss', loss, on_epoch=True, sync_dist=True)
+        labels, images = batch
+        # loss = self.forward(*batch)
+        embeddings = self.forward(images)
+        loss = batch_hard_triplet_loss(labels, embeddings, margin=5)
+        self.log('train/loss', loss, on_epoch=True)
 
         return loss
 
     def validation_step(self, batch):
-        loss = self.forward(*batch)
-        self.log('val/loss', loss, on_epoch=True, sync_dist=True)
+        labels, images = batch
+        # loss = self.forward(*batch)
+        embeddings = self.forward(images)
+        loss = batch_hard_triplet_loss(labels, embeddings, margin=5)
+        self.log('val/loss', loss, on_epoch=True)
 
         return loss
 
