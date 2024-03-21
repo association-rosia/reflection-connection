@@ -10,7 +10,7 @@ from src.models.retriever import FaissRetriever
 
 def main():
     config = utils.get_config()
-    wandb_run = utils.get_run('043bk1ks')
+    wandb_run = utils.get_run('m8yavzfm')
     model = InferenceModel.load_from_wandb_run(config, wandb_run, 'cpu')
     embeddings_builder = EmbeddingsBuilder(device=1, return_names=True)
     query_folder_path = os.path.join(config['path']['data'], 'raw', 'test', 'query')

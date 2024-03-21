@@ -7,6 +7,7 @@ from torch.utils.data import Dataset
 
 import src.data.transforms as dT
 from src import utils
+from src.data import utils as d_utils
 
 
 class RefConTripletDataset(Dataset):
@@ -27,9 +28,7 @@ class RefConTripletDataset(Dataset):
         self.set_class_name = set(list_class_name)
         self.processor = processor
         self.train = train
-        targets, img_paths = self._remove_targets(list_class_name, list_img_path)
-        self.img_paths = img_paths
-        self.targets = targets
+        self.targets, self.img_paths = self._remove_targets(list_class_name, list_img_path)
 
         if not self.train:
             self.triplets = self._generate_triplets()
@@ -109,53 +108,21 @@ class RefConTripletDataset(Dataset):
         return anchor_img, positive_img, negative_img
 
 
-def get_class_path(dir_path):
-    list_class_name = []
-    list_img_path = []
-    for class_name in os.listdir(dir_path):
-        class_path = os.path.join(dir_path, class_name)
-        if os.path.isdir(class_path):
-            for img_name in os.listdir(class_path):
-                if img_name.endswith('.png'):
-                    img_path = os.path.join(class_path, img_name)
-                    list_class_name.append(class_name)
-                    list_img_path.append(img_path)
-
-    return list_class_name, list_img_path
-
-
-def get_train_val_split(wandb_config, list_class_name, list_img_path):
-    train_class_name, val_class_name, train_path_img, val_path_img = train_test_split(
-        list_class_name, list_img_path,
-        train_size=0.8,
-        random_state=wandb_config['random_state'],
-        stratify=list_class_name
-    )
-
-    return train_class_name, val_class_name, train_path_img, val_path_img
-
-
-def get_image_folder(config):
-    path = os.path.join(config['path']['data'], 'raw', 'train')
-    path = utils.get_notebooks_path(path)
-
-    return path
-
 
 def make_train_triplet_dataset(config, wandb_config):
-    image_folder = get_image_folder(config)
-    list_class_name, list_img_path = get_class_path(image_folder)
+    image_folder = d_utils.get_image_folder(config)
+    list_class_name, list_img_path = d_utils.get_class_path(image_folder)
     processor = dT.make_training_processor(config, wandb_config)
-    train_class_name, _, train_path_img, _ = get_train_val_split(wandb_config, list_class_name, list_img_path)
+    train_class_name, _, train_path_img, _ = d_utils.get_train_val_split(wandb_config, list_class_name, list_img_path)
 
     return RefConTripletDataset(wandb_config, train_class_name, train_path_img, processor, True)
 
 
 def make_val_triplet_dataset(config, wandb_config):
-    image_folder = get_image_folder(config)
-    list_class_name, list_img_path = get_class_path(image_folder)
+    image_folder = d_utils.get_image_folder(config)
+    list_class_name, list_img_path = d_utils.get_class_path(image_folder)
     processor = dT.make_training_processor(config, wandb_config)
-    _, val_class_name, _, val_path_img = get_train_val_split(wandb_config, list_class_name, list_img_path)
+    _, val_class_name, _, val_path_img = d_utils.get_train_val_split(wandb_config, list_class_name, list_img_path)
 
     return RefConTripletDataset(wandb_config, val_class_name, val_path_img, processor, False)
 
