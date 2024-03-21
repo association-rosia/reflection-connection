@@ -1,19 +1,17 @@
-import copy
-import json
-import multiprocessing as mp
 import os
-
+import json
 import numpy as np
-import torch
-import wandb
-import wandb.apis.public as wandb_api
-from torch.utils.data import Subset
-
+import multiprocessing as mp
+from src import utils
 import src.data.datasets.inference as inference_d
 import src.models.utils as mutils
-from src import utils
-from src.models.inference import EmbeddingsBuilder
 from src.models.retriever import FaissRetriever
+from src.models.inference import EmbeddingsBuilder
+import wandb
+import wandb.apis.public as wandb_api
+import torch
+import copy
+from torch.utils.data import Subset
 
 
 def main():
@@ -101,13 +99,8 @@ class IterativeTrainer:
             query_labels, matched_paths, distances,
             f'{wandb_run.name}-{wandb_run.id}'
         )
-<<<<<<<< HEAD:src/models/fine_tuning/iterative.py
 
-        return f'{wandb_run.name}-{wandb_run.id}.json'
-========
-        
         fit_dict['iterative_data'] = f'{wandb_run.name}-{wandb_run.id}.json'
->>>>>>>> main:src/models/iterative.py
 
 
 class CuratedBuilder:
