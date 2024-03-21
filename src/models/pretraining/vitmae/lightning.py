@@ -13,6 +13,8 @@ from transformers import ViTMAEForPreTraining
 import src.data.datasets.vitmae as vitmae_td
 from src import utils
 
+import wandb
+
 
 class RefConLightning(pl.LightningModule):
     def __init__(
@@ -29,20 +31,22 @@ class RefConLightning(pl.LightningModule):
         self.model = model
 
     def forward(self, inputs):
-        outputs = self.model(pixel_values=inputs)
-        loss = outputs.loss
-
-        return loss
+        return self.model(pixel_values=inputs)
 
     def training_step(self, batch):
-        loss = self.forward(batch)
+        outputs = self.forward(batch)
+        loss = outputs.loss
         self.log('train/loss', loss, on_epoch=True, sync_dist=True)
 
         return loss
 
-    def validation_step(self, batch):
-        loss = self.forward(batch)
+    def validation_step(self, batch, batch_idx):
+        outputs = self.forward(batch)
+        loss = outputs.loss
         self.log('val/loss', loss, on_epoch=True, sync_dist=True)
+
+        if batch_idx == 0:
+            self.log_image(batch, outputs)
 
         return loss
 
