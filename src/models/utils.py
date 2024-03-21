@@ -54,7 +54,7 @@ def get_trainer(config):
 
     early_stopping_callback = pl.callbacks.EarlyStopping(
         monitor='val/loss',
-        patience=100,
+        patience=50,
         verbose=True,
         mode='min'
     )
@@ -74,7 +74,7 @@ def get_trainer(config):
             devices=wandb.config.devices,
             max_epochs=wandb.config.max_epochs,
             logger=pl.loggers.WandbLogger(),
-            callbacks=[checkpoint_callback],
+            callbacks=[checkpoint_callback, early_stopping_callback],
             precision='16-mixed',
             strategy='ddp_find_unused_parameters_true',
             val_check_interval=wandb.config.val_check_interval
