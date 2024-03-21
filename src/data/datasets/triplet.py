@@ -121,28 +121,28 @@ def get_image_folder(config):
     return path
 
 
-def get_curated_class_path(config, wandb_config):
+def get_curated_class_path(config):
     image_folder = get_image_folder(config)
     curated_image_paths, curated_labels = utils.get_paths_labels(image_folder)
-    augmented_dataset = utils.load_augmented_dataset(wandb_config)
-    augmented_image_paths = [image_dict['image_path'] for image_dict in augmented_dataset]
-    augmented_labels = [image_dict['label'] for image_dict in augmented_dataset]
-    curated_image_paths.extend(augmented_image_paths)
-    curated_labels.extend(augmented_labels)
     
     return curated_image_paths, curated_labels
 
 
 def make_train_triplet_dataset(config, wandb_config):
-    curated_image_paths, curated_labels  = get_curated_class_path(config, wandb_config)
+    curated_image_paths, curated_labels  = get_curated_class_path(config)
     processor = dT.make_training_processor(config, wandb_config)
     train_image_paths, _, train_labels, _ = get_train_val_split(wandb_config, curated_image_paths, curated_labels)
-
+    augmented_dataset = utils.load_augmented_dataset(wandb_config)
+    augmented_image_paths = [image_dict['image_path'] for image_dict in augmented_dataset]
+    augmented_labels = [image_dict['label'] for image_dict in augmented_dataset]
+    train_image_paths.extend(augmented_image_paths)
+    train_labels.extend(augmented_labels)
+    
     return RefConTripletDataset(wandb_config, train_image_paths, train_labels, processor, True)
 
 
 def make_val_triplet_dataset(config, wandb_config):
-    curated_image_paths, curated_labels = get_curated_class_path(config, wandb_config)
+    curated_image_paths, curated_labels = get_curated_class_path(config)
     processor = dT.make_training_processor(config, wandb_config)
     _, val_image_paths, _, val_labels = get_train_val_split(wandb_config, curated_image_paths, curated_labels)
 
