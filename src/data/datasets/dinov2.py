@@ -43,7 +43,7 @@ class RefConDinov2Dataset(Dataset):
 
 
 def make_pretrain_dataset(config, wandb_config, set):
-    images_path = d_utils.get_images_path(config, set)
+    images_path = d_utils.get_pretraining_images_path(config, set)
     processor = dT.make_pretraining_processor(config, wandb_config)
 
     return RefConDinov2Dataset(wandb_config, images_path, processor)

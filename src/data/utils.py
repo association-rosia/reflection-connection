@@ -4,7 +4,7 @@ from src import utils
 from sklearn.model_selection import train_test_split
 
 
-def get_images_path(config, set):
+def get_pretraining_images_path(config, set):
     train_path = os.path.join(config['path']['data'], 'raw', 'train')
     train_glob = os.path.join(train_path, '**/*.png')
     test_path = os.path.join(config['path']['data'], 'raw', 'test')

@@ -8,7 +8,7 @@ import os
 import torch
 import wandb
 
-import src.models.training.vit.torchvision.lightning as vit_l
+import src.models.fine_tuning.vit.torchvision.lightning as vit_l
 from src import utils
 from src.models import utils as mutils
 
