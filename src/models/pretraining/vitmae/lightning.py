@@ -51,7 +51,7 @@ class RefConLightning(pl.LightningModule):
             'scheduler': ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5, verbose=True),
             'monitor': 'val/loss',
             'interval': 'epoch',
-            'frequency': 1
+            # 'frequency': 1
         }
         return [optimizer], [scheduler]
 

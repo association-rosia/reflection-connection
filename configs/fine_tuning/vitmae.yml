@@ -15,6 +15,6 @@ pretrained_checkpoint: 'fanciful-bush-370-lmqv1byw.ckpt'
 batch_size: 32
 val_check_interval: 1.0
 
-lr: 0.000005
+lr: 0.000001
 
 devices: [ 0 ]
