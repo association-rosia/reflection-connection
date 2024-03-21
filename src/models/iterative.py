@@ -1,17 +1,19 @@
-import os
+import copy
 import json
-import numpy as np
 import multiprocessing as mp
-from src import utils
-import src.data.datasets.inference as inference_d
-import src.models.utils as mutils
-from src.models.retriever import FaissRetriever
-from src.models.inference import EmbeddingsBuilder
+import os
+
+import numpy as np
+import torch
 import wandb
 import wandb.apis.public as wandb_api
-import torch
-import copy
 from torch.utils.data import Subset
+
+import src.data.datasets.inference as inference_d
+import src.models.utils as mutils
+from src import utils
+from src.models.inference import EmbeddingsBuilder
+from src.models.retriever import FaissRetriever
 
 
 def main():

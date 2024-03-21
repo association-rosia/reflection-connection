@@ -1,8 +1,11 @@
-import os
 import json
+import os
 from glob import glob
-from src import utils
+
 from sklearn.model_selection import train_test_split
+
+from src import utils
+
 
 def load_augmented_dataset(wandb_config):
     if wandb_config.get('iterative_data', None) is None:
@@ -49,6 +52,7 @@ def get_image_folder(config):
     path = utils.get_notebooks_path(path)
 
     return path
+
 
 def get_curated_class_path(config):
     image_folder = get_image_folder(config)

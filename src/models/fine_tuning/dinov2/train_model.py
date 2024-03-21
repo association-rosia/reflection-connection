@@ -33,7 +33,7 @@ def get_lightning(config, wandb_config):
         'wandb_config': wandb_config,
         'model': model
     }
-    
+
     checkpoint = wandb_config.get('checkpoint', 'None')
     if checkpoint == 'None':
         lightning = dinov2_l.RefConLightning(**kwargs)
