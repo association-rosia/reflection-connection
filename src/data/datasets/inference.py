@@ -9,11 +9,6 @@ from src import utils
 
 
 class RefConInferenceDataset(Dataset):
-    """
-    Train: For each sample (anchor) randomly chooses a positive and negative samples
-    Test: Creates fixed triplets for testing
-    """
-
     def __init__(self, wandb_config: dict, image_paths: list, labels: list, processor: dT.RefConfProcessor):
         self.wandb_config = wandb_config
         self.processor = processor

@@ -1,4 +1,3 @@
-import json
 import os
 
 import torch
@@ -80,16 +79,6 @@ class RunDemo:
         self.config = load_config(config_file)
         self.name = name
         self.id = id
-
-
-def load_augmented_dataset(wandb_config):
-    if wandb_config.get('iterative_data', None) is None:
-        return []
-    config = get_config()
-    path = os.path.join(config['path']['data'], 'processed', 'train', wandb_config['iterative_data'])
-    path = get_notebooks_path(path)
-    with open(path, 'r') as f:
-        return json.load(f)
 
 
 def get_metric(wandb_config):

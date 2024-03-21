@@ -4,23 +4,22 @@ import os
 import numpy as np
 
 from src import utils
-from src.models.inference import EmbeddingsBuilder
+import src.data.datasets.inference as inference_d
 from src.models.retriever import FaissRetriever
+from src.models.inference import EmbeddingsBuilder
 
 
 def main():
     config = utils.get_config()
-    wandb_run = utils.get_run('043bk1ks')
-    model = InferenceModel.load_from_wandb_run(config, wandb_run, 'cpu')
-    embeddings_builder = EmbeddingsBuilder(device=1, return_names=True)
-    query_folder_path = os.path.join(config['path']['data'], 'raw', 'test', 'query')
-    corpus_folder_path = os.path.join(config['path']['data'], 'raw', 'test', 'image_corpus')
-    corpus_embeddings, corpus_names = embeddings_builder.build_embeddings(model=model, folder_path=corpus_folder_path,
-                                                                          return_names=True)
-    query_embeddings, query_names = embeddings_builder.build_embeddings(model=model, folder_path=query_folder_path,
-                                                                        return_names=True)
-
-    metric = get_metric(wandb_run.config)
+    wandb_run = utils.get_run('rivhpstz')
+    embeddings_builder = EmbeddingsBuilder(devices=[0])
+    
+    corpus_dataset = inference_d.make_submission_corpus_inference_dataset(config, wandb_run.config)
+    corpus_embeddings, corpus_names = embeddings_builder.build_embeddings(config, wandb_run, dataset=corpus_dataset)
+    query_dataset = inference_d.make_submission_query_inference_dataset(config, wandb_run.config)
+    query_embeddings, query_names = embeddings_builder.build_embeddings(config, wandb_run, dataset=query_dataset)
+    
+    metric = utils.get_metric(wandb_run.config)
     retriever = FaissRetriever(embeddings_size=corpus_embeddings.shape[1], metric=metric)
     retriever.add_to_index(corpus_embeddings, labels=corpus_names)
     distances, matched_labels = retriever.query(query_embeddings, k=3)
@@ -62,16 +61,13 @@ class ResultBuilder:
 
         # validate shapes of inputs
         if len(query_image_labels.shape) != 1:
-            raise ValueError(
-                f'Expected query_image_labels to be 1-dimensional array, got {query_image_labels.shape} instead')
+            raise ValueError(f'Expected query_image_labels to be 1-dimensional array, got {query_image_labels.shape} instead')
 
         if matched_labels.shape != (query_image_labels.shape[0], self.k):
-            raise ValueError(
-                f'Expected matched_labels to have shape {(query_image_labels.shape[0], self.k)}, got {matched_labels.shape} instead')
+            raise ValueError(f'Expected matched_labels to have shape {(query_image_labels.shape[0], self.k)}, got {matched_labels.shape} instead')
 
         if scores.shape != (query_image_labels.shape[0], self.k):
-            raise ValueError(
-                f'Expected {self.score_mode}_scores to have shape {(query_image_labels.shape[0], self.k)}, got {scores.shape} instead')
+            raise ValueError(f'Expected {self.score_mode}_scores to have shape {(query_image_labels.shape[0], self.k)}, got {scores.shape} instead')
 
         for i, x in enumerate(query_image_labels):
             labels = matched_labels[i]
@@ -90,10 +86,10 @@ class ResultBuilder:
             json.dump(self.results, f)
 
     def __call__(self,
-                 query_image_labels,
-                 matched_labels,
-                 scores,
-                 json_name: str = 'results') -> None:
+              query_image_labels,
+              matched_labels,
+              scores,
+              json_name: str = 'results') -> None:
 
         self.build(query_image_labels, matched_labels, scores)
         self.to_json(json_name)

@@ -1,9 +1,17 @@
 import os
+import json
 from glob import glob
-
+from src import utils
 from sklearn.model_selection import train_test_split
 
-from src import utils
+def load_augmented_dataset(wandb_config):
+    if wandb_config.get('iterative_data', None) is None:
+        return []
+    config = utils.get_config()
+    path = os.path.join(config['path']['data'], 'processed', 'train', wandb_config['iterative_data'])
+    path = utils.get_notebooks_path(path)
+    with open(path, 'r') as f:
+        return json.load(f)
 
 
 def get_pretraining_images_path(config, set):
@@ -21,19 +29,19 @@ def get_pretraining_images_path(config, set):
     return images_path
 
 
-def get_class_path(dir_path):
-    list_class_name = []
-    list_img_path = []
-    for class_name in os.listdir(dir_path):
-        class_path = os.path.join(dir_path, class_name)
+def get_paths_labels(folder_path):
+    labels = []
+    paths = []
+    for class_name in os.listdir(folder_path):
+        class_path = os.path.join(folder_path, class_name)
         if os.path.isdir(class_path):
             for img_name in os.listdir(class_path):
                 if img_name.endswith('.png'):
                     img_path = os.path.join(class_path, img_name)
-                    list_class_name.append(class_name)
-                    list_img_path.append(img_path)
+                    labels.append(class_name)
+                    paths.append(img_path)
 
-    return list_class_name, list_img_path
+    return paths, labels
 
 
 def get_image_folder(config):
@@ -42,13 +50,19 @@ def get_image_folder(config):
 
     return path
 
+def get_curated_class_path(config):
+    image_folder = get_image_folder(config)
+    curated_image_paths, curated_labels = get_paths_labels(image_folder)
 
-def get_train_val_split(wandb_config, list_class_name, list_img_path):
-    train_class_name, val_class_name, train_path_img, val_path_img = train_test_split(
-        list_class_name, list_img_path,
+    return curated_image_paths, curated_labels
+
+
+def get_train_val_split(wandb_config, image_paths, labels):
+    train_image_paths, val_image_paths, train_labels, val_labels = train_test_split(
+        image_paths, labels,
         train_size=0.8,
         random_state=wandb_config['random_state'],
-        stratify=list_class_name
+        stratify=labels
     )
 
-    return train_class_name, val_class_name, train_path_img, val_path_img
+    return train_image_paths, val_image_paths, train_labels, val_labels

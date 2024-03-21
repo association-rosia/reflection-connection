@@ -8,7 +8,7 @@ import warnings
 import torch
 import wandb
 
-import src.models.fine_tuning.dinov2.lightning as dinov2_l
+import src.models.training.dinov2.lightning as dinov2_l
 from src import utils
 from src.models import utils as mutils
 
@@ -33,9 +33,9 @@ def get_lightning(config, wandb_config):
         'wandb_config': wandb_config,
         'model': model
     }
-
-    checkpoint = wandb_config.get('checkpoint', None)
-    if checkpoint is None:
+    
+    checkpoint = wandb_config.get('checkpoint', 'None')
+    if checkpoint == 'None':
         lightning = dinov2_l.RefConLightning(**kwargs)
     else:
         path_checkpoint = os.path.join(config['path']['models']['root'], checkpoint)
