@@ -1,38 +1,23 @@
 import os
-from glob import glob
-from importlib import import_module
-from typing import overload
 
 import torch
+import torch.multiprocessing as mp
+from torch.utils.data import DataLoader, Subset
 import wandb.apis.public as wandb_api
-from PIL import Image
+
 from tqdm.autonotebook import tqdm
 from typing_extensions import Self
 
-import src.data.transforms as dT
+import src.data.datasets.inference as inference_d
+
+import src.models.utils as mutils
 from src import utils
+ 
 
-
-def _import_module_lightning(model_id):
-    if 'clip' in model_id:
-        return import_module('src.models.training.clip.lightning')
-    elif 'dinov2' in model_id:
-        return import_module('src.models.training.dinov2.lightning')
-    elif 'ViT' in model_id:
-        return import_module('src.models.training.vit.torchvision.lightning')
-    elif 'vit' in model_id:
-        return import_module('src.models.training.vit.transformers.lightning')
-
-
-def load_lightning_model(config, wandb_run, map_location):
-    model_id = wandb_run.config['model_id']
-    module_lightning = _import_module_lightning(model_id)
-
-    if 'clip' in model_id or 'dinov2' in model_id or 'ViT' in model_id:
-        model = module_lightning.get_model(wandb_run.config)
-    else:
-        model = module_lightning.get_model(config, wandb_run.config)
-
+def load_lightning_model(config: dict, wandb_run: wandb_api.Run | utils.RunDemo, map_location):
+    module_lightning = mutils.get_lightning_library(wandb_run.config['model_id'])
+    model = module_lightning.get_model(wandb_run.config)
+    
     kwargs = {
         'config': config,
         'wandb_config': wandb_run.config,
@@ -43,31 +28,19 @@ def load_lightning_model(config, wandb_run, map_location):
     path_checkpoint = utils.get_notebooks_path(path_checkpoint)
     lightning = module_lightning.RefConLightning.load_from_checkpoint(path_checkpoint, map_location=map_location,
                                                                       **kwargs)
-
     return lightning
 
 
-class InferenceModel:
+class InferenceModel(torch.nn.Module):
     def __init__(self,
-                 config: dict,
-                 wandb_config: dict,
+                 model_id: str,
                  model: torch.nn.Module,
-                 device: str
-                 ) -> None:
-
-        self.config = config
-        self.wandb_config = wandb_config
+                ) -> None:
+        super().__init__()
+        self.model_id = model_id
         self.model = model
-        self.device = device
-        self.dtype = torch.float32
-        self.processor = dT.make_eval_processor(config, self.wandb_config)
-        self.model.to(dtype=self.dtype, device=device)
         self.model.eval()
-
-    def to(self, device):
-        self.device = device
-        self.model.to(device=device)
-
+        
     @classmethod
     def load_from_wandb_run(
             cls,
@@ -75,7 +48,7 @@ class InferenceModel:
             wandb_run: wandb_api.Run | utils.RunDemo,
             map_location) -> Self:
         model = cls._load_model(config, wandb_run, map_location)
-        self = cls(config, wandb_run.config, model, map_location)
+        self = cls(wandb_run.config['model_id'], model)
 
         return self
 
@@ -86,23 +59,18 @@ class InferenceModel:
         return lightning.model
 
     @torch.inference_mode
-    def forward(self, images: list[Image.Image] | Image.Image) -> torch.Tensor:
-        if isinstance(images, Image.Image):
-            images = [images]
-        pixel_values = self.processor.preprocess_image(images)
-        pixel_values = pixel_values.to(device=self.device, dtype=self.dtype)
-
-        if 'clip' in self.wandb_config['model_id']:
+    def forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
+        if 'clip' in self.model_id:
             embeddings = self._clip_forward(pixel_values)
-        elif 'dinov2' in self.wandb_config['model_id']:
+        elif 'dinov2' in self.model_id:
             embeddings = self._dinov2_forward(pixel_values)
-        elif 'ViT' in self.wandb_config['model_id']:
+        elif 'ViT' in self.model_id:
             embeddings = self._vit_torchvision_forward(pixel_values)
-        elif 'vit' in self.wandb_config['model_id']:
+        elif 'vit' in self.model_id:
             embeddings = self._vit_transformers_forward(pixel_values)
-
-        return embeddings.squeeze(dim=0).cpu()
-
+        
+        return embeddings
+    
     def _clip_forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
         return self.model(pixel_values)['image_embeds']
 
@@ -115,93 +83,96 @@ class InferenceModel:
     def _vit_transformers_forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
         return self.model(pixel_values)['pooler_output']
 
-    def __call__(self, images: list[Image.Image] | Image.Image) -> torch.Tensor:
-        return self.forward(images)
-
 
 class EmbeddingsBuilder:
     def __init__(self,
-                 device: int | str = 0,
-                 return_names: bool = True,
+                 devices: int | str | list[int] = 0,
+                 inference_dtype = torch.float16,
+                 batch_size: int = 16,
+                 num_workers: int = 16,
                  ) -> None:
-        if isinstance(device, int):
-            self.device = f'cuda:{device}'
+        if isinstance(devices, int):
+            self.devices = [f'cuda:{devices}']
+        elif isinstance(devices, list):
+            self.devices = [f'cuda:{device}'for device in devices]
         else:
-            self.device = device
-        self.return_names = return_names
+            self.devices = [devices]
+        self.inference_dtype = inference_dtype
+        self.batch_size = batch_size
+        self.num_workers = num_workers
 
-    def _load_model(self, config, wandb_run):
-        return InferenceModel.load_from_wandb_run(config, wandb_run, self.device)
-
-    def _get_model(self, model=None, config=None, wandb_run=None):
-        if model is None:
-            model = self._load_model(config, wandb_run)
-        else:
-            model.to(device=self.device)
-
-        return model
-
-    @staticmethod
-    def _make_list_paths(folder_path):
-        glob_path = os.path.join(folder_path, '**', '*.png')
-
-        return glob(glob_path, recursive=True)
-
-    @staticmethod
-    def _load_image(image_path):
-        with open(image_path, 'rb') as f:
-            return Image.open(f).convert(mode='RGB')
-
-    @overload
-    def build_embeddings(self, model: InferenceModel, folder_path: str, return_names: bool = None):
-        ...
-
-    @overload
-    def build_embeddings(self, model: InferenceModel, list_paths: list[str], return_names: bool = None):
-        ...
-
-    @overload
-    def build_embeddings(self, config: dict, wandb_run: wandb_api.Run | utils.RunDemo, folder_path: str,
-                         return_names: bool = None):
-        ...
-
-    @overload
-    def build_embeddings(self, config: dict, wandb_run: wandb_api.Run | utils.RunDemo, list_paths: list[str],
-                         return_names: bool = None):
-        ...
-
-    def build_embeddings(self, model=None, config=None, wandb_run=None, folder_path=None, list_paths=None,
-                         return_names=False):
-        model = self._get_model(model, config, wandb_run)
-
-        # Si la liste des images n'est pas fournie, récupère la liste de toutes les images du folder
-        if list_paths is None:
-            list_paths = self._make_list_paths(folder_path)
-
+    def _inference_worker(self,
+                          config: dict,
+                          wandb_run: wandb_api.Run | utils.RunDemo,
+                          device: str,
+                          dataset: inference_d.RefConInferenceDataset,
+                          embeddings_labels = None):
+        
+        model = InferenceModel.load_from_wandb_run(config, wandb_run, device)
+        model = model.to(dtype=self.inference_dtype)
+        loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
         embeddings = []
-        names = []
-        for img_path in tqdm(list_paths):
-            img = self._load_image(img_path)
-            embeddings.append(model(img))
-            names.append(os.path.basename(img_path))
-        embeddings = torch.stack(embeddings)
-
-        if (return_names is None and self.return_names) or return_names:
-            return embeddings, names
+        labels = []
+        # Faire l'inférence avec ce DataLoader
+        for _, (pixel_values, targets) in enumerate(tqdm(loader)):
+            pixel_values = pixel_values.to(device=device, dtype=self.inference_dtype)
+            embeddings.append(model(pixel_values).cpu())
+            labels.extend(targets)
+        
+        embeddings = torch.cat(embeddings)
+        if embeddings_labels is not None:
+            embeddings_labels.append((embeddings, labels))
         else:
-            return embeddings
+            return embeddings, labels
+
+    def _multiprocess_inference(self, config, wandb_run, dataset, output):
+        processes = []
+        manager = mp.Manager()
+        embeddings_labels = manager.list()
+
+        for rank, device in enumerate(self.devices):
+            subset_indices = list(range(rank, len(dataset), len(self.devices)))
+            subset = Subset(dataset, indices=subset_indices)
+            p = mp.Process(target=self._inference_worker, args=(config, wandb_run, device, subset, embeddings_labels))
+            p.start()
+            processes.append(p)
+        
+        for p in processes:
+            p.join()
+        
+        embeddings = []
+        labels = []
+        for embedding, label in embeddings_labels:
+            embeddings.append(embedding)
+            labels.extend(label)
+        
+        output.embeddings = torch.cat(embeddings)
+        output.labels = labels
+    
+    def build_embeddings(self, config: dict, wandb_run: wandb_api.Run | utils.RunDemo, dataset: inference_d.RefConInferenceDataset):
+        
+        if len(self.devices) > 1:
+            manager = mp.Manager()
+            output = manager.Namespace()
+            output.embeddings = None
+            output.labels = None
+            p = mp.Process(target=self._multiprocess_inference, args=(config, wandb_run, dataset, output))
+            p.start()
+            p.join()
+            return output.embeddings, output.labels
+        else:
+            return self._inference_worker(config, wandb_run, self.devices[0], dataset)
 
 
 def _debug():
     config = utils.get_config()
-    wandb_run = utils.get_run('zgv4h86p')
-    model = InferenceModel.load_from_wandb_run(config, wandb_run, 'cpu')
-    embeddings_builder = EmbeddingsBuilder(device=0, return_names=True)
-    folder_path = os.path.join(config['path']['data'], 'raw', 'train')
-    embeddings_builder.build_embeddings(model=model, folder_path=folder_path)
-
-    del model, embeddings_builder
-    torch.cuda.empty_cache()
+    wandb_run = utils.get_run('omo3q9fq')
+    embeddings_builder = EmbeddingsBuilder(devices=[0], batch_size=64, num_workers=32)
+    dataset = inference_d.make_iterative_query_inference_dataset(config, wandb_run.config)
+    embeddings_builder.build_embeddings(config, wandb_run, dataset)
+    emb, lab = embeddings_builder.build_embeddings(config, wandb_run, dataset)
+    
+    return
 
 
 if __name__ == '__main__':

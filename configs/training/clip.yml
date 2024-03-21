@@ -1,4 +1,4 @@
-dry: false
+dry: true
 
 random_state: 42
 max_epochs: 25
@@ -10,6 +10,7 @@ crop_size: 224
 exclude_anchor: [ 'Boring' ]
 
 model_id: 'openai/clip-vit-large-patch14'
+checkpoint: None
 
 batch_size: 24
 val_check_interval: 1.0
