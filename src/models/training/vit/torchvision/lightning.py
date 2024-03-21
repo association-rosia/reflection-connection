@@ -48,7 +48,7 @@ class RefConLightning(pl.LightningModule):
         return self.model(inputs)
 
     def training_step(self, batch):
-        labels, images = batch
+        images, labels = batch
         # loss = self.forward(*batch)
         embeddings = self.forward(images)
         loss = batch_hard_triplet_loss(labels, embeddings, margin=5)
@@ -57,7 +57,7 @@ class RefConLightning(pl.LightningModule):
         return loss
 
     def validation_step(self, batch):
-        labels, images = batch
+        images, labels = batch
         # loss = self.forward(*batch)
         embeddings = self.forward(images)
         loss = batch_hard_triplet_loss(labels, embeddings, margin=5)

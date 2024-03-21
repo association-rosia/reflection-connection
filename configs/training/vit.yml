@@ -1,5 +1,5 @@
 torchvision:
-  dry: true
+  dry: false
 
   random_state: 42
   max_epochs: 1000
@@ -21,7 +21,7 @@ torchvision:
   devices: [ 0 ]
 
 transformers:
-  dry: true
+  dry: false
 
   random_state: 42
   max_epochs: 1000
