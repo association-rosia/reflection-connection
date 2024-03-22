@@ -4,6 +4,7 @@ from torch.utils.data import Dataset
 
 import src.data.transforms as dT
 from src import utils
+import src.data.utils as d_utils
 
 
 class RefConTripletDataset(Dataset):
@@ -128,7 +129,7 @@ def make_val_triplet_dataset(config, wandb_config):
 
 def _debug():
     config = utils.get_config()
-    wandb_config = utils.load_config('training/dinov2.yml')
+    wandb_config = utils.load_config('fine_tuning/dinov2.yml')
     val_dataset = make_val_triplet_dataset(config, wandb_config)
     train_dataset = make_train_triplet_dataset(config, wandb_config)
 

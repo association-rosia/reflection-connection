@@ -10,7 +10,7 @@ import wandb.apis.public as wandb_api
 from torch.utils.data import Subset
 
 import src.data.datasets.inference as inference_d
-import src.models.utils as mutils
+import src.models.utils as m_utils
 from src import utils
 from src.models.inference import EmbeddingsBuilder
 from src.models.retriever import FaissRetriever
@@ -18,7 +18,7 @@ from src.models.retriever import FaissRetriever
 
 def main():
     config = utils.get_config()
-    iterative_config = utils.load_config('training/iterative.yml')
+    iterative_config = utils.load_config('fine_tuning/iterative.yml')
     curated_folder = os.path.join(config['path']['data'], 'raw', 'train')
 
     iterative_trainer = IterativeTrainer(
@@ -43,40 +43,36 @@ class IterativeTrainer:
     def fit(self):
         manager = mp.Manager()
         fit_dict = manager.dict()
-        fit_dict['iterative_data'] = None
+        iterative_data = self.iterative_config.get('iterative_data', 'None')
+        fit_dict['iterative_data'] = iterative_data if iterative_data != 'None' else None
         for _ in range(self.iterative_config['iterations']):
-            # if len(self.iterative_config['devices']) > 1:
-            p = mp.Process(target=self._train_model, args=(fit_dict['iterative_data'], fit_dict))
+            p = mp.Process(target=self._train_model, args=(fit_dict,))
             p.start()
             p.join()
-            # else:
-            #     self._train_model(iterative_data, wandb_dict)
-
-            wandb_run = utils.get_run(fit_dict['value'])
+            wandb_run = utils.get_run(fit_dict['wandb_id'])
+            
             p = mp.Process(target=self._create_next_iterative_dataset, args=(wandb_run, fit_dict))
             p.start()
             p.join()
 
-    def _train_model(self, iterative_data, wandb_dict):
+    def _train_model(self, fit_dict):
         utils.init_wandb(self.iterative_config['model_config'], self.iterative_config['sub_config'])
         wandb.config.update({
-            'iterative_data': iterative_data,
+            'iterative_data': fit_dict['iterative_data'],
             'curated_threshold': self.iterative_config['curated_threshold'],
             'duplicate_threshold': self.iterative_config['duplicate_threshold'],
-            'devices': [1],
+            'devices': [2],
             # 'devices': self.iterative_config['devices'],
             'dry': self.iterative_config['dry'],
             'checkpoint': self.iterative_config['checkpoint'],
         }, allow_val_change=True)
-        wandb_dict['value'] = copy.deepcopy(wandb.run.id)
-        trainer = mutils.get_trainer(self.config)
-        lightning = mutils.get_lightning(self.config, wandb.config)
+        fit_dict['wandb_id'] = copy.deepcopy(wandb.run.id)
+        trainer = m_utils.get_trainer(self.config)
+        lightning = m_utils.get_lightning(self.config, wandb.config)
         trainer.fit(model=lightning)
         del trainer, lightning
         torch.cuda.empty_cache()
         wandb.finish()
-
-        return wandb_dict
 
     def _create_next_iterative_dataset(self, wandb_run: utils.RunDemo | wandb_api.Run, fit_dict):
         embeddings_builder = EmbeddingsBuilder(devices=self.iterative_config['devices'], batch_size=64, num_workers=32)

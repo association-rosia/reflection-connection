@@ -6,6 +6,7 @@ from torch.utils.data import Dataset
 
 import src.data.transforms as dT
 from src import utils
+import src.data.utils as d_utils
 
 
 class RefConInferenceDataset(Dataset):
@@ -32,7 +33,7 @@ class RefConInferenceDataset(Dataset):
 
 
 def _get_iterative_query_paths_labels(wandb_config, curated_folder):
-    augmented_dataset = utils.load_augmented_dataset(wandb_config)
+    augmented_dataset = d_utils.load_augmented_dataset(wandb_config)
     query_paths, query_labels = utils.get_paths_labels(curated_folder)
     query_paths.extend([image_dict['image_path'] for image_dict in augmented_dataset])
     query_labels.extend([image_dict['label'] for image_dict in augmented_dataset])
@@ -57,7 +58,7 @@ def make_iterative_query_inference_dataset(config, wandb_config):
 
 
 def make_iterative_corpus_inference_dataset(config, wandb_config):
-    augmented_dataset = utils.load_augmented_dataset(wandb_config)
+    augmented_dataset = d_utils.load_augmented_dataset(wandb_config)
     query_paths = [image_dict['image_path'] for image_dict in augmented_dataset]
     uncurated_folder = os.path.join(config['path']['data'], 'processed', 'pretrain')
     template_path = os.path.join(uncurated_folder, '**', '*.png')

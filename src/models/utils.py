@@ -5,6 +5,7 @@ import wandb
 
 import src.models.fine_tuning.clip.lightning as clip
 import src.models.fine_tuning.dinov2.lightning as dinov2
+import src.models.fine_tuning.vitmae.lightning as vit_mae
 import src.models.fine_tuning.vit.torchvision.lightning as vit_torchvision
 import src.models.fine_tuning.vit.transformers.lightning as vit_transformers
 
@@ -14,6 +15,8 @@ def get_lightning_library(model_id):
         return clip
     elif 'dinov2' in model_id:
         return dinov2
+    elif 'vit-mae' in model_id:
+        return vit_mae
     elif 'ViT' in model_id:
         return vit_torchvision
     elif 'vit' in model_id:
@@ -24,7 +27,7 @@ def get_lightning_library(model_id):
 
 def get_lightning(config, wandb_config, checkpoint=None):
     lightning_module = get_lightning_library(wandb_config['model_id'])
-    model = lightning_module.get_model(wandb_config)
+    model = lightning_module.get_model(wandb_config=wandb_config, config=config)
 
     kwargs = {
         'config': config,

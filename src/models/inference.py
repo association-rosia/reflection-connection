@@ -14,7 +14,7 @@ from src import utils
 
 def load_lightning_model(config: dict, wandb_run: wandb_api.Run | utils.RunDemo, map_location):
     module_lightning = mutils.get_lightning_library(wandb_run.config['model_id'])
-    model = module_lightning.get_model(wandb_run.config)
+    model = module_lightning.get_model(wandb_config=wandb_run.config, config=config)
     kwargs = {
         'config': config,
         'wandb_config': wandb_run.config,
@@ -61,6 +61,8 @@ class InferenceModel(torch.nn.Module):
             embeddings = self._clip_forward(pixel_values)
         elif 'dinov2' in self.model_id:
             embeddings = self._dinov2_forward(pixel_values)
+        elif 'vit-mae' in self.model_id:
+            embeddings = self._vitmae_forward(pixel_values)
         elif 'ViT' in self.model_id:
             embeddings = self._vit_torchvision_forward(pixel_values)
         elif 'vit' in self.model_id:
@@ -73,6 +75,9 @@ class InferenceModel(torch.nn.Module):
 
     def _dinov2_forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
         return self.model(pixel_values)['pooler_output']
+    
+    def _vitmae_forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
+        return self.model(pixel_values).last_hidden_state[:, 0, :]
 
     def _vit_torchvision_forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
         return self.model(pixel_values)

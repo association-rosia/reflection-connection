@@ -65,7 +65,7 @@ class RefConOnlineMiningTripletDataset(Dataset):
 
 def make_train_triplet_dataset(config, wandb_config):
     image_folder = d_utils.get_image_folder(config)
-    list_class_name, list_img_path = d_utils.get_paths_labels(image_folder)
+    list_img_path, list_class_name = d_utils.get_paths_labels(image_folder)
     processor = dT.make_training_processor(config, wandb_config)
     train_path_img, _, train_class_name, _ = d_utils.get_train_val_split(wandb_config, list_img_path, list_class_name)
 
@@ -74,7 +74,7 @@ def make_train_triplet_dataset(config, wandb_config):
 
 def make_val_triplet_dataset(config, wandb_config):
     image_folder = d_utils.get_image_folder(config)
-    list_class_name, list_img_path = d_utils.get_paths_labels(image_folder)
+    list_img_path, list_class_name = d_utils.get_paths_labels(image_folder)
     processor = dT.make_training_processor(config, wandb_config)
     _, val_path_img, _, val_class_name = d_utils.get_train_val_split(wandb_config, list_img_path, list_class_name)
 
