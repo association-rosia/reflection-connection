@@ -35,7 +35,7 @@ class RefConInferenceDataset(Dataset):
 def _get_iterative_query_paths_labels(wandb_config, curated_folder):
     augmented_dataset = d_utils.load_augmented_dataset(wandb_config)
     query_paths, query_labels = utils.get_paths_labels(curated_folder)
-    query_paths.extend([image_dict['image_path'] for image_dict in augmented_dataset])
+    query_paths.extend([utils.get_notebooks_path(image_dict['image_path']) for image_dict in augmented_dataset])
     query_labels.extend([image_dict['label'] for image_dict in augmented_dataset])
 
     return query_paths, query_labels
@@ -51,6 +51,7 @@ def _get_submission_paths_labels(folder_path):
 
 def make_iterative_query_inference_dataset(config, wandb_config):
     curated_folder = os.path.join(config['path']['data'], 'raw', 'train')
+    curated_folder = utils.get_notebooks_path(curated_folder)
     query_paths, query_labels = _get_iterative_query_paths_labels(wandb_config, curated_folder)
     processor = dT.make_eval_processor(config, wandb_config)
 
@@ -59,8 +60,9 @@ def make_iterative_query_inference_dataset(config, wandb_config):
 
 def make_iterative_corpus_inference_dataset(config, wandb_config):
     augmented_dataset = d_utils.load_augmented_dataset(wandb_config)
-    query_paths = [image_dict['image_path'] for image_dict in augmented_dataset]
+    query_paths = [utils.get_notebooks_path(image_dict['image_path']) for image_dict in augmented_dataset]
     uncurated_folder = os.path.join(config['path']['data'], 'processed', 'pretrain')
+    uncurated_folder = utils.get_notebooks_path(uncurated_folder)
     template_path = os.path.join(uncurated_folder, '**', '*.png')
     corpus_paths = glob(template_path, recursive=True)
     corpus_paths = list(set(corpus_paths) - set(query_paths))
@@ -70,6 +72,7 @@ def make_iterative_corpus_inference_dataset(config, wandb_config):
 
 
 def make_submission_inference_dataset(folder_path, config, wandb_config):
+    folder_path = utils.get_notebooks_path(folder_path)
     image_paths, labels = _get_submission_paths_labels(folder_path)
     processor = dT.make_eval_processor(config, wandb_config)
 
@@ -78,13 +81,13 @@ def make_submission_inference_dataset(folder_path, config, wandb_config):
 
 def make_submission_query_inference_dataset(config, wandb_config):
     query_folder = os.path.join(config['path']['data'], 'raw', 'test', 'query')
-
+    
     return make_submission_inference_dataset(query_folder, config, wandb_config)
 
 
 def make_submission_corpus_inference_dataset(config, wandb_config):
     corpus_folder = os.path.join(config['path']['data'], 'raw', 'test', 'image_corpus')
-
+    
     return make_submission_inference_dataset(corpus_folder, config, wandb_config)
 
 
