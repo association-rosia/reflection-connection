@@ -11,7 +11,7 @@ from src.models.retriever import FaissRetriever
 
 def main():
     config = utils.get_config()
-    wandb_run = utils.get_run('rivhpstz')
+    wandb_run = utils.get_run('yqbxbjmd')
     embeddings_builder = EmbeddingsBuilder(devices=[0])
 
     corpus_dataset = inference_d.make_submission_corpus_inference_dataset(config, wandb_run.config)

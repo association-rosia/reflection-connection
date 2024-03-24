@@ -75,8 +75,8 @@ def get_run(run_id: str) -> wandb_api.Run:
 
 
 class RunDemo:
-    def __init__(self, config_file: str, id: str, name: str) -> None:
-        self.config = load_config(config_file)
+    def __init__(self, config_file: str, id: str, name: str, sub_config: str = None) -> None:
+        self.config = load_config(config_file, sub_config)
         self.name = name
         self.id = id
 

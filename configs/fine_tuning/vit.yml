@@ -3,7 +3,7 @@ torchvision:
 
   random_state: 42
   max_epochs: 1000
-  criterion: 'TMWDL-Euclidean'
+  criterion: 'TMWDL-Cosine'
 
   contrast_factor: 15
   size: 256

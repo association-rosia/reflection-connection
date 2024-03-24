@@ -10,7 +10,7 @@ crop_size: 224
 exclude_anchor: [ 'Boring' ]
 
 model_id: 'facebook/vit-mae-large'
-pretrained_checkpoint: 'fanciful-bush-370-lmqv1byw.ckpt'
+pretrained_checkpoint: 'rare-eon-453-h50udox1.ckpt'
 
 batch_size: 32
 val_check_interval: 1.0

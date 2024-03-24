@@ -1,14 +1,15 @@
 dry: false
 
+iterative_data: None
 iterations: 10
 
 images_by_iterations: 1
 curated_threshold: 0.1
 duplicate_threshold: 0
 
-model_config: 'training/vit.yml'
-sub_config: 'torchvision'
+model_config: 'fine_tuning/vitmae.yml'
+sub_config:
 
-checkpoint: None
+checkpoint: 'rare-eon-453-h50udox1.ckpt'
 
-devices: [ 1, 2, 3 ]
+devices: [ 2, 3 ]
