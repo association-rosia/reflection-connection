@@ -45,13 +45,13 @@ class IterativeTrainer:
         fit_dict = manager.dict()
         iterative_data = self.iterative_config.get('iterative_data', 'None')
         fit_dict['iterative_data'] = iterative_data if iterative_data != 'None' else None
+        fit_dict['wandb_run'] = None
         for _ in range(self.iterative_config['iterations']):
             p = mp.Process(target=self._train_model, args=(fit_dict,))
             p.start()
             p.join()
-            wandb_run = utils.get_run(fit_dict['wandb_id'])
             
-            p = mp.Process(target=self._create_next_iterative_dataset, args=(wandb_run, fit_dict))
+            p = mp.Process(target=self._create_next_iterative_dataset, args=(fit_dict,))
             p.start()
             p.join()
 
@@ -66,24 +66,33 @@ class IterativeTrainer:
             'dry': self.iterative_config['dry'],
             'checkpoint': self.iterative_config['checkpoint'],
         }, allow_val_change=True)
-        fit_dict['wandb_id'] = copy.deepcopy(wandb.run.id)
+        
+        fit_dict['wandb_run'] = utils.RunDemo(
+            config_file=self.iterative_config['model_config'],
+            sub_config=self.iterative_config['sub_config'],
+            id=copy.deepcopy(wandb.run.id),
+            name=copy.deepcopy(wandb.run.name)
+        )
+        
         trainer = m_utils.get_trainer(self.config)
         lightning = m_utils.get_lightning(self.config, wandb.config)
         trainer.fit(model=lightning)
+        
         del trainer, lightning
         torch.cuda.empty_cache()
+        
         wandb.finish()
 
-    def _create_next_iterative_dataset(self, wandb_run: utils.RunDemo | wandb_api.Run, fit_dict):
+    def _create_next_iterative_dataset(self, fit_dict):
         embeddings_builder = EmbeddingsBuilder(devices=self.iterative_config['devices'], batch_size=64, num_workers=32)
-        query_dataset = inference_d.make_iterative_query_inference_dataset(self.config, wandb_run.config)
-        query_embeddings, query_labels = embeddings_builder.build_embeddings(self.config, wandb_run, query_dataset)
-        corpus_dataset = inference_d.make_iterative_corpus_inference_dataset(self.config, wandb_run.config)
-        if wandb_run.config['dry']:
+        query_dataset = inference_d.make_iterative_query_inference_dataset(self.config, fit_dict['wandb_run'].config)
+        query_embeddings, query_labels = embeddings_builder.build_embeddings(self.config, fit_dict['wandb_run'], query_dataset)
+        corpus_dataset = inference_d.make_iterative_corpus_inference_dataset(self.config, fit_dict['wandb_run'].config)
+        if fit_dict['wandb_run'].config['dry']:
             corpus_dataset = Subset(corpus_dataset, indices=range(10000))
-        corpus_embeddings, corpus_paths = embeddings_builder.build_embeddings(self.config, wandb_run, corpus_dataset)
+        corpus_embeddings, corpus_paths = embeddings_builder.build_embeddings(self.config, fit_dict['wandb_run'], corpus_dataset)
 
-        metric = utils.get_metric(wandb_run.config)
+        metric = utils.get_metric(fit_dict['wandb_run'].config)
         retriever = FaissRetriever(embeddings_size=corpus_embeddings.shape[1], metric=metric)
         retriever.add_to_index(corpus_embeddings, labels=corpus_paths)
         distances, matched_paths = retriever.query(query_embeddings, k=self.iterative_config['images_by_iterations'])
@@ -93,12 +102,11 @@ class IterativeTrainer:
             self.path_iterative_data,
             score_mode='distance'
         )
+        file_name = f'{fit_dict["wandb_run"].name}-{fit_dict["wandb_run"].id}'
         curated_builder(
-            query_labels, matched_paths, distances,
-            f'{wandb_run.name}-{wandb_run.id}'
-        )
+            query_labels, matched_paths, distances, file_name)
 
-        fit_dict['iterative_data'] = f'{wandb_run.name}-{wandb_run.id}.json'
+        fit_dict['iterative_data'] = f'{file_name}.json'
 
 
 class CuratedBuilder:

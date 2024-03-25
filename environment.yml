@@ -3,23 +3,21 @@ channels:
   - conda-forge
 dependencies:
   - python=3.10.*
-  - faiss-gpu
   - pip
 
   - pip:
       - jupyter
       - pyyaml
       - tqdm
-      - opencv-python
       - numpy
       - pandas
       - scikit-learn
+      - opencv-python
       - torch
       - torchvision
       - transformers
       - pytorch-lightning
+      - faiss-cpu
       - wandb
-      - matplotlib
       - plotly
-      - opencv-python
-      - online_triplet_loss
+      - matplotlib
