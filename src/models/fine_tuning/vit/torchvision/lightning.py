@@ -91,7 +91,7 @@ class RefConLightning(pl.LightningModule):
         return dataloader
 
 
-def get_model(wandb_config, **kwargs) -> RefConTorchvisionViT:
+def get_model(wandb_config, **kwargs):
     model_id = wandb_config['model_id']
 
     if 'ViT_B_16' in model_id:
@@ -104,22 +104,21 @@ def get_model(wandb_config, **kwargs) -> RefConTorchvisionViT:
     weights_path = os.path.join('models', f'{model_id}.pth')
     weights = torch.load(weights_path)
     vit.load_state_dict(weights)
-    model = RefConTorchvisionViT(vit)
 
-    return model
+    return vit
 
 
 def _debug():
     config = utils.get_config()
-     # Specify the ID of the model you wish to use.
+    # Specify the ID of the model you wish to use.
     wandb_id = 'nszfciym'
     # Specify the Name of the model you wish to use.
     wandb_name = 'key-lime-pie-110'
 
-    # If you are using a WandB account to record the runs, use the code below.
-    # wandb_run = utils.get_run(wandb_id)
-    # Otherwise, specify the name and ID of the model and choose the corresponding configuration file for training the model.
-    # wandb_run = utils.RunDemo('fine_tuning/vit.yml', id=wandb_id, name=wandb_name, sub_config='torchvision')
+    # If you are using a WandB account to record the runs, use the code below. wandb_run = utils.get_run(wandb_id)
+    # Otherwise, specify the name and ID of the model and choose the corresponding configuration file for training
+    # the model. wandb_run = utils.RunDemo('fine_tuning/vit.yml', id=wandb_id, name=wandb_name,
+    # sub_config='torchvision')
     wandb_run = utils.get_run(wandb_id)
     wandb_config = wandb_run.config
     # wandb_config = utils.init_wandb('training/vit.yml', 'torchvision')
@@ -134,8 +133,8 @@ def _debug():
     lightning = RefConLightning(**kwargs)
     path_checkpoint = os.path.join(config['path']['models'], f'{wandb_run.name}-{wandb_run.id}.ckpt')
     path_checkpoint = utils.get_notebooks_path(path_checkpoint)
-    lightning = RefConLightning.load_from_checkpoint(path_checkpoint, map_location='cuda:0',
-                                                                      **kwargs)
+    lightning = RefConLightning.load_from_checkpoint(path_checkpoint, **kwargs)
+
     return
 
 
