@@ -3,24 +3,37 @@ import os
 import pytorch_lightning as pl
 import wandb
 
-import src.models.fine_tuning.clip.lightning as clip
-import src.models.fine_tuning.dinov2.lightning as dinov2
-import src.models.fine_tuning.vitmae.lightning as vit_mae
-import src.models.fine_tuning.vit.torchvision.lightning as vit_torchvision
-import src.models.fine_tuning.vit.transformers.lightning as vit_transformers
+import src.models.fine_tuning.clip.lightning as ft_clip
+import src.models.fine_tuning.dinov2.lightning as ft_dinov2
+import src.models.fine_tuning.vitmae.lightning as ft_vit_mae
+import src.models.fine_tuning.vit.torchvision.lightning as ft_vit_torchvision
+import src.models.fine_tuning.vit.transformers.lightning as ft_vit_transformers
+
+import src.models.pretraining.dinov2.lightning as pt_dinov2
+import src.models.pretraining.vitmae.lightning as pt_vitmae
 
 
-def get_lightning_library(model_id):
-    if 'clip' in model_id:
-        return clip
-    elif 'dinov2' in model_id:
-        return dinov2
-    elif 'vit-mae' in model_id:
-        return vit_mae
-    elif 'ViT' in model_id:
-        return vit_torchvision
-    elif 'vit' in model_id:
-        return vit_transformers
+def get_lightning_library(model_id, type='fine_tuning'):
+    if type == 'fine_tuning':
+        if 'clip' in model_id:
+            return ft_clip
+        elif 'dinov2' in model_id:
+            return ft_dinov2
+        elif 'vit-mae' in model_id:
+            return ft_vit_mae
+        elif 'ViT' in model_id:
+            return ft_vit_torchvision
+        elif 'vit' in model_id:
+            return ft_vit_transformers
+        else:
+            raise NotImplementedError()
+    elif type == 'pretraining':
+        if 'vit-mae' in model_id:
+            return pt_vitmae
+        elif 'vit' in model_id:
+            return pt_dinov2
+        else:
+            raise NotImplementedError()
     else:
         raise NotImplementedError()
 
