@@ -26,7 +26,7 @@ def main():
 
 
 def get_lightning(config, wandb_config):
-    model = vit_l.get_model(wandb_config)
+    model = vit_l.get_model(config, wandb_config)
 
     kwargs = {
         'config': config,

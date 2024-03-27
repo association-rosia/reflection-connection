@@ -93,7 +93,7 @@ class RefConLightning(pl.LightningModule):
 
 
 def get_model(config, wandb_config) -> ViTMAEModel:
-    model = vitmae_l.get_model(wandb_config)
+    model = vitmae_l.get_model(config, wandb_config)
 
     kwargs = {
         'config': config,

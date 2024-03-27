@@ -13,8 +13,8 @@ import src.models.pretraining.dinov2.lightning as pt_dinov2
 import src.models.pretraining.vitmae.lightning as pt_vitmae
 
 
-def get_lightning_library(model_id, type='fine_tuning'):
-    if type == 'fine_tuning':
+def get_lightning_library(model_id, training='fine_tuning'):
+    if training == 'fine_tuning':
         if 'clip' in model_id:
             return ft_clip
         elif 'dinov2' in model_id:
@@ -27,7 +27,7 @@ def get_lightning_library(model_id, type='fine_tuning'):
             return ft_vit_transformers
         else:
             raise NotImplementedError()
-    elif type == 'pretraining':
+    elif training == 'pretraining':
         if 'vit-mae' in model_id:
             return pt_vitmae
         elif 'vit' in model_id:
@@ -38,8 +38,8 @@ def get_lightning_library(model_id, type='fine_tuning'):
         raise NotImplementedError()
 
 
-def get_lightning(config, wandb_config, checkpoint=None):
-    lightning_module = get_lightning_library(wandb_config['model_id'])
+def get_lightning(config, wandb_config, training='fine_tuning', checkpoint=None):
+    lightning_module = get_lightning_library(wandb_config['model_id'], training=training)
     model = lightning_module.get_model(wandb_config=wandb_config, config=config)
 
     kwargs = {

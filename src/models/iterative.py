@@ -89,7 +89,7 @@ class IterativeTrainer:
         query_embeddings, query_labels = embeddings_builder.build_embeddings(self.config, fit_dict['wandb_run'], query_dataset)
         corpus_dataset = inference_d.make_iterative_corpus_inference_dataset(self.config, fit_dict['wandb_run'].config)
         if fit_dict['wandb_run'].config['dry']:
-            corpus_dataset = Subset(corpus_dataset, indices=range(10000))
+            corpus_dataset = Subset(corpus_dataset, indices=range(1000))
         corpus_embeddings, corpus_paths = embeddings_builder.build_embeddings(self.config, fit_dict['wandb_run'], corpus_dataset)
 
         metric = utils.get_metric(fit_dict['wandb_run'].config)

@@ -88,7 +88,7 @@ class RefConLightning(pl.LightningModule):
         return dataloader
 
 
-def get_model(wandb_config, **kwargs) -> CLIPVisionModelWithProjection:
+def get_model(config, wandb_config) -> CLIPVisionModelWithProjection:
     model = CLIPVisionModelWithProjection.from_pretrained(
         pretrained_model_name_or_path=wandb_config['model_id'],
         ignore_mismatched_sizes=True

@@ -1,7 +1,7 @@
 dry: true
 
 iterative_data: None
-iterations: 10
+iterations: 2
 
 images_by_iterations: 1
 curated_threshold: 0.1

@@ -1,4 +1,4 @@
-dry: false
+dry: true
 
 type: 'fine-tuning' # pretraining
 

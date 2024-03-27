@@ -92,7 +92,7 @@ class RefConLightning(pl.LightningModule):
         return dataloader
 
 
-def get_model(wandb_config) -> ViTMAEForPreTraining:
+def get_model(config, wandb_config) -> ViTMAEForPreTraining:
     model = ViTMAEForPreTraining.from_pretrained(pretrained_model_name_or_path=wandb_config['model_id'])
 
     return model

@@ -91,7 +91,7 @@ class RefConLightning(pl.LightningModule):
         return dataloader
 
 
-def get_model(wandb_config, **kwargs):
+def get_model(config, wandb_config):
     model_id = wandb_config['model_id']
 
     if 'ViT_B_16' in model_id:
