@@ -11,6 +11,20 @@ This project was made possible by our compute partners [2CRSI](https://2crsi.com
 and [NVIDIA](https://www.nvidia.com/).
 
 ## 🏆 Challenge ranking
+The score of the challenge was a custom score. The evaluation metric used for scoring will be weighted accuracy:
+
+![image](https://github.com/association-rosia/reflection-connection/assets/65440015/fd9a0ee9-5a9b-490d-ba8a-91034b966e06)
+
+The final score for all N query images is then calculated as follows:
+
+![image](https://github.com/association-rosia/reflection-connection/assets/65440015/03245997-f593-424e-b463-a0e3e4f3b0a1)
+
+Our solution was the 8th (out of 147 teams) one with a score equal to 0.4001 🎉.
+
+*Prediction Leaderboard* podium:  
+🥇 DAISUKE YAMAMOTO - 0.5168  
+🥈 Igor Ivanov - 0.4936    
+🥉 Dmitry Ulyanov - 0.4500  
 
 ## 🖼️ Result example
 
