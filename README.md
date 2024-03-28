@@ -7,7 +7,7 @@ geological structures. SNNs are trained on a limited dataset of seismic features
 within a larger corpus. This approach reduces manual effort and error, empowering researchers to focus on integrating
 geological insights into comprehensive models of the Earth's subsurface.
 
-This project was made possible by our compute partners [2CRSI](https://2crsi.com/)
+This project was made possible by our compute partners [2CRSi](https://2crsi.com/)
 and [NVIDIA](https://www.nvidia.com/).
 
 ## 🏆 Challenge ranking
