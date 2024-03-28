@@ -26,9 +26,13 @@ Our solution was the 8th (out of 147 teams) one with a score equal to 0.4001 �
 🥈 Igor Ivanov - 0.4936    
 🥉 Dmitry Ulyanov - 0.4500  
 
-## 🖼️ Result example
-
 ## 🏛️ Proposed solution
+
+### Pretraining: 
+<img src='assets/pretraining.png'>
+
+### Fine-tuning (iterative training): 
+<img src='assets/iterative-training.png'>
 
 ## #️⃣ Command lines
 
