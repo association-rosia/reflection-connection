@@ -1,4 +1,4 @@
-# 🪨 Reflection Connection: Bringing New Algorithms to Old Data
+# 🪨 Reflection Connection
 
 <img src='assets/reflection-connection.png'>
 
@@ -36,7 +36,21 @@ Our solution was the 8th (out of 147 teams) one with a score equal to 0.4001 �
 
 ## #️⃣ Command lines
 
+### Launch a training
+
+```bash
+python src/models/<model path>/train_model.py
+```
+
+View project's runs on [WandB](https://wandb.ai/association-rosia/reflection-connection/).
+
 ## 🔬 References
+
+Oquab, M., Darcet, T., Moutakanni, T., Vo, H., Szafraniec, M., Khalidov, V., ... & Bojanowski, P. (2023). Dinov2: Learning robust visual features without supervision. arXiv preprint arXiv:2304.07193.
+
+He, K., Chen, X., Xie, S., Li, Y., Dollár, P., & Girshick, R. (2022). Masked autoencoders are scalable vision learners. In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition (pp. 16000-16009).
+
+Radford, A., Kim, J. W., Hallacy, C., Ramesh, A., Goh, G., Agarwal, S., ... & Sutskever, I. (2021, July). Learning transferable visual models from natural language supervision. In International conference on machine learning (pp. 8748-8763). PMLR.
 
 ## 📝 Citing
 
